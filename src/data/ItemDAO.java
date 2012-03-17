@@ -25,7 +25,7 @@ public class ItemDAO {
 		LinkedList<Integer> list = new LinkedList<Integer>();
 		try {
 			PreparedStatement preparedStatement = conn
-					.prepareStatement("select unique user_id from rec_log where item_id=? " +
+					.prepareStatement("select DISTINCT user_id from rec_log where item_id=? " +
 							"and rec_time>=? and rec_time<=? and result=1;");
 			preparedStatement.setInt(1, itemID);
 			preparedStatement.setLong(2, minTime);

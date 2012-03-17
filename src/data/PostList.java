@@ -6,8 +6,8 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 
 public class PostList implements Serializable {
-	private PostNode top;
-	private int size;
+	private transient PostNode top;
+	private transient int size;
 
 	public PostList() {
 		this.size = 0;
@@ -29,12 +29,9 @@ public class PostList implements Serializable {
 			} else {
 				PostNode pre = top;
 				PostNode post = pre;
-				while (pre != null) {
-					if (pre.getKey() < node.getKey()) {
-						post = pre;
-						pre = pre.getNext();
-					} else
-						break;
+				while (pre != null && pre.getKey() < node.getKey()) {
+					post = pre;
+					pre = pre.getNext();
 				}
 				node.setNext(pre);
 				post.setNext(node);
@@ -42,44 +39,48 @@ public class PostList implements Serializable {
 		}
 		size++;
 	}
-	
+
 	/**
 	 * @param out
-	 * implement my own version of writeObject
+	 *            implement my own version of writeObject
 	 */
-	public void writeObject(ObjectOutputStream out){
+	private void writeObject(ObjectOutputStream out) throws IOException {
 		try {
+			out.defaultWriteObject();
+			out.writeInt(size);
 			PostNode temp = top;
-			while(temp != null){ 
-				temp.writeObject(out);
+			while (temp != null) {
+				out.writeInt(temp.getKey());
+				out.writeDouble(temp.getWeight());
 				temp = temp.getNext();
 			}
-			out.defaultWriteObject();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
-	
+
 	/**
 	 * @param in
-	 * implement my own version of readObject
+	 *            implement my own version of readObject
 	 */
-	public void readObject(ObjectInputStream in) {
-			PostNode temp = top;
-			while(temp != null){
-				temp.readObject(in);
-				temp = temp.getNext();
+	private void readObject(ObjectInputStream in) throws IOException,
+			ClassNotFoundException {
+		try {
+			in.defaultReadObject();
+			// read the field size
+			int temp = in.readInt();
+			for (int i = 0; i < temp; i++) {
+				int key = in.readInt();
+				double weight = in.readDouble();
+				PostNode node = new PostNode(key, weight);
+				insert(node);
 			}
-			try {
-				in.defaultReadObject();
-			} catch (IOException e) {
-				e.printStackTrace();
-			} catch (ClassNotFoundException e) {
-				e.printStackTrace();
-			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (ClassNotFoundException e) {
+			e.printStackTrace();
+		}
 	}
-
-	
 
 	public PostNode getTop() {
 		return top;
