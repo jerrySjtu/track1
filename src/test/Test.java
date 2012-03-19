@@ -11,7 +11,7 @@ public class Test {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		date();
+		System.out.println(Integer.toString(32453));
 	}
 	
 	private static void date(){

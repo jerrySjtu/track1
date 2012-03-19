@@ -1,6 +1,5 @@
 package build;
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -10,9 +9,11 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.Set;
 
 import data.InvertedIndex;
+import data.PostList;
 import data.PostNode;
 import data.User;
 import data.UserDAO;
@@ -33,13 +34,148 @@ public class UserTask1 {
 	}
 
 	public static void main(String[] args) {
+		System.out.println("begins--------------");
 		String pathName = "/home/sjtu123/data/track1/userTagIndex.ser";
-		System.out.println("begin to build index--------------");
-		buildIndex();
-		System.out.println("finish building index --------------");
-		System.out.println("begin to write index--------------");
-		writeIndex(pathName);
-		System.out.println("finish writing index --------------");
+		calUserTagSim(pathName);
+//		String pathName = "/home/sjtu123/data/track1/itemCFIndex.ser";
+//		calUserCFSim(pathName);
+		System.out.println("finished--------------");
+	}
+
+	/**
+	 * @param pathName
+	 *            the path of the item-user index file calculate the similarity
+	 *            among all users by CF and write the results to table
+	 *            user_sim_cf
+	 */
+	public static void calUserCFSim(String pathName) {
+		InvertedIndex index = loadIndex(pathName);
+		// get all users
+		LinkedList<User> users = UserDAO.getAllUserProfile();
+		Iterator<User> userIterator = users.iterator();
+		int i = 1;
+		while (userIterator.hasNext()) {
+			User user = userIterator.next();
+			//get all users who accepted some common items
+			Set<Integer> neighborSet = getNeighborByItem(index, user);
+			Iterator<Integer> neighborIerator = neighborSet.iterator();
+			while(neighborIerator.hasNext()){
+				int neighborID = neighborIerator.next();
+				double similarity = cfSimilarity(user.getId(), neighborID);
+				UserDAO.insertSimByCF(user.getId(), neighborID, similarity);
+			}
+			System.out.println(i + " user's cf sim finished--------------");
+			i++;
+		}
+	}
+
+	/**
+	 * @param pathName
+	 *            the path of the tag-user index file calculate the similarity
+	 *            among all users by tag and write the results to table
+	 *            user_sim_tag
+	 */
+	public static void calUserTagSim(String pathName) {
+		InvertedIndex index = loadIndex(pathName);
+		// get all users
+		LinkedList<User> users = UserDAO.getAllUserProfile();
+		Iterator<User> userIterator = users.iterator();
+		int i = 1;
+		while (userIterator.hasNext()) {
+			User user = userIterator.next();
+			Set<Integer> neighborSet = getNeighborSetByTag(index, user);
+			// get all the users who have some common tags
+			Iterator<Integer> neighborIterator = neighborSet.iterator();
+			// calculate the similarity and write to database
+			while (neighborIterator.hasNext()) {
+				User neighbor = UserDAO.getUserProfileByID(neighborIterator
+						.next());
+				double similarity = profileSimilarity(user, neighbor);
+				UserDAO.insertSimByTag(user.getId(), neighbor.getId(),
+						similarity);
+			}
+			System.out.println(i + " user's tag sim finished--------------");
+			i++;
+		}
+	}
+	
+	// calculate the similarity of the two users by cf
+	private static double cfSimilarity(int user1, int user2){
+		Set<Integer> set1 = UserDAO.getItemAcceptedByID(user1);
+		Set<Integer> set2 = UserDAO.getItemAcceptedByID(user2);
+		Set<Integer> itemSet = new HashSet<Integer>();
+		itemSet.addAll(set1);
+		itemSet.addAll(set2);
+		Iterator<Integer> itemIterator = itemSet.iterator();
+		double length1 = 0;
+		double length2 = 0;
+		double product = 0;
+		while(itemIterator.hasNext()){
+			int itemID = itemIterator.next();
+			if(set1.contains(itemID))
+				length1++;
+			if(set2.contains(itemID))
+				length2++;
+			if(set1.contains(itemID) && set2.contains(itemID))
+				product++;
+		}
+		return product / (Math.sqrt(length1) * Math.sqrt(length2));
+	}
+
+	// calculate the similarity of the two users by profile
+	private static double profileSimilarity(User user1, User user2) {
+		Map<String, Double> map1 = tfTag(user1);
+		Map<String, Double> map2 = tfTag(user2);
+		Set<String> union = new HashSet<String>();
+		union.addAll(map1.keySet());
+		union.addAll(map2.keySet());
+		Iterator<String> iterator = union.iterator();
+		double length1 = 0;
+		double length2 = 0;
+		double product = 0;
+		while (iterator.hasNext()) {
+			String tag = iterator.next();
+			if (map1.containsKey(tag))
+				length1 += map1.get(tag) * map1.get(tag);
+			if (map2.containsKey(tag))
+				length2 += map2.get(tag) * map2.get(tag);
+			if (map1.containsKey(tag) && map2.containsKey(tag))
+				product += map1.get(tag) * map2.get(tag);
+		}
+		return product / (Math.sqrt(length1) * Math.sqrt(length2));
+	}
+
+	// get all the users who accept some common item
+	private static Set<Integer> getNeighborByItem(InvertedIndex index, User user) {
+		Set<Integer> itemList = UserDAO.getItemAcceptedByID(user.getId());
+		Iterator<Integer> itemIterator = itemList.iterator();
+		Set<Integer> neighborSet = new HashSet<Integer>();
+		while (itemIterator.hasNext()) {
+			int itemID = itemIterator.next();
+			PostList postList = index
+					.getPostListByKey(Integer.toString(itemID));
+			PostNode node = postList.getTop();
+			while (node != null) {
+				neighborSet.add(node.getKey());
+				node = node.getNext();
+			}
+		}
+		return neighborSet;
+	}
+
+	// get all the users who have some common tags
+	private static Set<Integer> getNeighborSetByTag(InvertedIndex index, User user) {
+		String[] tags = user.getTags();
+		Set<Integer> neighborSet = new HashSet<Integer>();
+		for (int i = 0; i < tags.length; i++) {
+			PostList postList = index.getPostListByKey(tags[i]);
+			PostNode temp = postList.getTop();
+			while (temp != null) {
+				neighborSet.add(temp.getKey());
+				temp = temp.getNext();
+			}
+		}
+		return neighborSet;
 	}
 
 	/**
@@ -76,7 +212,7 @@ public class UserTask1 {
 	 *            write the index to a file
 	 */
 	private static void writeIndex(String pathName) {
-		FileOutputStream fos = null; 
+		FileOutputStream fos = null;
 		ObjectOutputStream out = null;
 		try {
 			fos = new FileOutputStream(pathName);
@@ -107,7 +243,7 @@ public class UserTask1 {
 		}
 		return index;
 	}
-
+	
 	private static HashMap<String, Double> tfTag(User user) {
 		String[] tags = user.getTags();
 		HashMap<String, Double> map = new HashMap<String, Double>();

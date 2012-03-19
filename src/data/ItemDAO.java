@@ -33,6 +33,8 @@ public class ItemDAO {
 			ResultSet results = preparedStatement.executeQuery();
 			while(results.next())
 				list.add(results.getInt(1));
+			results.close();
+			preparedStatement.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -49,6 +51,8 @@ public class ItemDAO {
 			if (result.next())
 				item = new Item(result.getInt(1), result.getString(2),
 						result.getString(3));
+			result.close();
+			preparedStatement.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -66,13 +70,69 @@ public class ItemDAO {
 						results.getString(3));
 				list.add(item);
 			}
+			results.close();
+			preparedStatement.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return list;
+	}
+	
+	//get similar items with CF similarity
+	public static LinkedList<PostNode> getItemWithCFSim(int itemID){
+		LinkedList<PostNode> list = new LinkedList<PostNode>();
+		try {
+			PreparedStatement preparedStatement = conn
+					.prepareStatement("select d_id, sim from item_sim_cf where id=?");
+			preparedStatement.setInt(1, itemID);
+			ResultSet result = preparedStatement.executeQuery();
+			if(result.next()){
+				PostNode node = new PostNode(result.getInt(1), result.getDouble(2));
+				list.add(node);
+			}
+			result.close();
+			preparedStatement.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return list;
+	}
+	
+	//get similar items with key similarity
+	public static LinkedList<PostNode> getItemWithKeySim(int itemID){
+		LinkedList<PostNode> list = new LinkedList<PostNode>();
+		try {
+			PreparedStatement preparedStatement = conn
+					.prepareStatement("select d_id, sim from item_sim_key where id=?");
+			preparedStatement.setInt(1, itemID);
+			ResultSet result = preparedStatement.executeQuery();
+			if(result.next()){
+				PostNode node = new PostNode(result.getInt(1), result.getDouble(2));
+				list.add(node);
+			}
+			result.close();
+			preparedStatement.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
 		return list;
 	}
 
-	public static void insertItemSimKey(int itemID, int dID, double similariy) {
+	public static void insertItemCFSim(int itemID, int dID, double similariy){
+		try {
+			PreparedStatement preparedStatement = conn
+					.prepareStatement("insert into item_sim_cf(id, d_id, sim) values(?,?,?)");
+			preparedStatement.setInt(1, itemID);
+			preparedStatement.setInt(2, dID);
+			preparedStatement.setDouble(3, similariy);
+			preparedStatement.execute();
+			preparedStatement.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public static void insertItemKeySim(int itemID, int dID, double similariy) {
 		try {
 			PreparedStatement preparedStatement = conn
 					.prepareStatement("insert into item_sim_key(id, d_id, sim) values(?,?,?)");
@@ -80,6 +140,7 @@ public class ItemDAO {
 			preparedStatement.setInt(2, dID);
 			preparedStatement.setDouble(3, similariy);
 			preparedStatement.execute();
+			preparedStatement.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}

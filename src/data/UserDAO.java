@@ -5,6 +5,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashSet;
 import java.util.LinkedList;
 
 public class UserDAO {
@@ -14,17 +15,36 @@ public class UserDAO {
 	static {
 		getConnection();
 	}
-	
-	public static User getUserProfileByID(int userID){
+
+	public static HashSet<Integer> getItemAcceptedByID(int userID){
+		HashSet<Integer> set = new HashSet<Integer>();
+		try{
+			PreparedStatement statement = conn.prepareStatement(
+					"select item_id from train_rec_log where user_id=? and result=1");
+			statement.setInt(1, userID);
+			ResultSet results = statement.executeQuery();
+			while(results.next())
+				set.add(results.getInt(1));
+			results.close();
+			statement.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return set;
+	}
+
+	public static User getUserProfileByID(int userID) {
 		User user = null;
 		try {
 			PreparedStatement preparedStatement = conn
 					.prepareStatement("select tweet_num,tag from user_profile where id=?;");
 			preparedStatement.setInt(1, userID);
 			ResultSet result = preparedStatement.executeQuery();
-			if(result.next())
-				user = new User(userID, result.getInt(1), result.getString(2), null);
-		}catch (SQLException e) {
+			if (result.next())
+				user = new User(userID, result.getInt(1), result.getString(2),null);
+			result.close();
+			preparedStatement.close();
+		} catch (SQLException e) {
 			e.printStackTrace();
 		}
 		return user;
@@ -42,6 +62,8 @@ public class UserDAO {
 						results.getString(2));
 				list.add(user);
 			}
+			results.close();
+			preparedStatement.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -60,12 +82,29 @@ public class UserDAO {
 						results.getString(3), null);
 				list.add(user);
 			}
+			results.close();
+			preparedStatement.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
 		return list;
 	}
 
+	public static void insertSimByCF(int userID1, int userID2,
+			double similarity) {
+		try {
+			PreparedStatement preparedStatement = conn
+					.prepareStatement("insert into user_sim_cf(id,d_id,sim) values(?,?,?)");
+			preparedStatement.setInt(1, userID1);
+			preparedStatement.setInt(2, userID2);
+			preparedStatement.setDouble(3, similarity);
+			preparedStatement.execute();
+			preparedStatement.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+	
 	public static void insertSimByTag(int userID1, int userID2,
 			double similarity) {
 		try {
@@ -75,6 +114,7 @@ public class UserDAO {
 			preparedStatement.setInt(2, userID2);
 			preparedStatement.setDouble(3, similarity);
 			preparedStatement.execute();
+			preparedStatement.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}

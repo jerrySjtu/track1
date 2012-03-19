@@ -19,7 +19,7 @@ public class UserTask implements Runnable {
 	public static void main(String[] args) {
 		UserTask instance = new UserTask();
 		System.out.println("begins----------------");
-		instance.allSimilarityByTag();
+		//instance.allSimilarityByTag();
 		System.out.println("ends----------------");
 	}
 

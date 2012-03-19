@@ -9,6 +9,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.HashMap;
@@ -19,6 +20,7 @@ import java.util.Set;
 import data.InvertedIndex;
 import data.Item;
 import data.ItemDAO;
+import data.PostList;
 import data.PostNode;
 import data.SortArray;
 import data.SortEntry;
@@ -28,41 +30,35 @@ public class ItemTask implements Runnable {
 	private final int BESTNUM = 300;
 	private static HashMap<String, Double> tfMap;
 	private static LinkedList<Item> itemList;
-	//the minimum time
+	// the minimum time
 	private final long MINTIME = 1318348785;
-	//the time separate the train set and test set 
+	// the time separate the train set and test set
 	private final long SEPTIME = 1320537601;
-	//the maximum time
+	// the maximum time
 	private final long MAXTIME = 1321027199;
-	
-	public static void main(String[] args){
+
+	public static void main(String[] args) {
 		ItemTask instance = new ItemTask();
-		InvertedIndex index = instance.buildIndex();
 		String pathName = "/home/sjtu123/data/track1/itemCFIndex.ser";
-		instance.writeIndex(index, pathName);
+		System.out.println("begins----------------");
+		instance.calSimilarityByCF(pathName);
+		System.out.println("finished----------------");
 	}
-	
+
 	@Override
 	public void run() {
 		System.out.println(action + " begins----------------");
-		if(action.equals("simByKeyWord"))
+		if (action.equals("simByKeyWord"))
 			calSimlarityByKeyWord();
 		System.out.println(action + " ends----------------");
 	}
-	
+
 	/**
-	 * calculate the similarity among all items
+	 * build the inverted document index with the item id as the term and user
+	 * id as the document
 	 */
-	public void calSimilarityByCF(){
-		
-	}
-	
-	/**
-	 * build the inverted document index with the item id as
-	 * the term and user id as the document
-	 */
-	public InvertedIndex buildIndex(){
-		//get all items
+	public InvertedIndex buildCFIndex() {
+		// get all items
 		LinkedList<Item> itemList = ItemDAO.readAllItems();
 		Iterator<Item> itemIterator = itemList.iterator();
 		Item item;
@@ -70,14 +66,15 @@ public class ItemTask implements Runnable {
 		InvertedIndex index = new InvertedIndex();
 		int userID;
 		int i = 1;
-		while(itemIterator.hasNext()){
+		while (itemIterator.hasNext()) {
 			item = itemIterator.next();
-			userList = ItemDAO.getUserByAcceptedItem(item.getId(), MINTIME, SEPTIME);
+			userList = ItemDAO.getUserByAcceptedItem(item.getId(), MINTIME,
+					SEPTIME);
 			Iterator<Integer> userIterator = userList.iterator();
-			while(userIterator.hasNext()){
+			while (userIterator.hasNext()) {
 				userID = userIterator.next();
 				PostNode postNode = new PostNode(userID, 0);
-				//insert the node
+				// insert the node
 				index.insertNode(Integer.toString(item.getId()), postNode);
 			}
 			System.out.println("The index of " + i + " item is calculated.");
@@ -85,13 +82,13 @@ public class ItemTask implements Runnable {
 		}
 		return index;
 	}
-	
+
 	/**
 	 * @param index
 	 * @param pathName
-	 * write the index to the file
+	 *            write the index to the file
 	 */
-	public void writeIndex(InvertedIndex index, String pathName){
+	public void writeIndex(InvertedIndex index, String pathName) {
 		FileOutputStream fos = null;
 		ObjectOutputStream out = null;
 		try {
@@ -103,13 +100,12 @@ public class ItemTask implements Runnable {
 			e.printStackTrace();
 		}
 	}
-	
+
 	/**
 	 * @param pathName
-	 * @return
-	 * load the index from the file
+	 * @return load the index from the file
 	 */
-	public InvertedIndex loadIndex(String pathName){
+	public InvertedIndex loadIndex(String pathName) {
 		FileInputStream fis = null;
 		ObjectInputStream in = null;
 		InvertedIndex index = null;
@@ -125,12 +121,48 @@ public class ItemTask implements Runnable {
 		}
 		return index;
 	}
-	
-	
 
-	/**
-	 * calculate the similarity among all items by similarity 
-	 */
+	// calculate the CF similarity among all items
+	public void calSimilarityByCF(String pathname) {
+		InvertedIndex index = loadIndex(pathname);
+		ArrayList<String> itemArray = index.keyArray();
+		for (int i = 0; i < itemArray.size(); i++) {
+			String itemID1 = itemArray.get(i);
+			Map<Integer, Double> map1 = index.docMap(itemID1);
+			// calculate the similarity between item i and item j
+			for (int j = i + 1; j < itemArray.size(); j++) {
+				String itemID2 = itemArray.get(i);
+				Map<Integer, Double> map2 = index.docMap(itemID2);
+				Set<Integer> docUnion = index.docUnion(itemID1, itemID1);
+				double similariy = similarityByCF(docUnion, map1, map2);
+				// write to database
+				ItemDAO.insertItemCFSim(Integer.parseInt(itemID1),
+						Integer.parseInt(itemID2), similariy);
+			}
+			System.out.println(i + "th item finsihed calculating CF sim----------------");
+		}
+	}
+
+	// calculate the CF similarity between two items
+	private double similarityByCF(Set<Integer> docUnion,
+			Map<Integer, Double> map1, Map<Integer, Double> map2) {
+		Iterator<Integer> iterator = docUnion.iterator();
+		double length1 = 0;
+		double length2 = 0;
+		double similarity = 0;
+		while (iterator.hasNext()) {
+			int itemID = iterator.next();
+			if (map1.containsKey(itemID))
+				length1++;
+			if (map2.containsKey(itemID))
+				length2++;
+			if (map1.containsKey(itemID) && map2.containsKey(itemID))
+				similarity++;
+		}
+		return similarity / (Math.sqrt(length1) * Math.sqrt(length2));
+	}
+
+	// calculate the similarity among all items by key similarity
 	public void calSimlarityByKeyWord() {
 		termFrequency();
 		Item item, dItem;
@@ -138,16 +170,17 @@ public class ItemTask implements Runnable {
 		for (int i = 0; i < BESTNUM; i++) {
 			item = itemList.get(i);
 			SortArray sortArray = new SortArray(BESTNUM);
-			//calculate similarity
+			// calculate the similarity between item i and item j
 			for (int j = i + 1; j < BESTNUM; j++) {
 				dItem = itemList.get(j);
 				similariy = simlarityByKeyWord(item, dItem);
 				sortArray.insert(dItem.getId(), similariy);
 			}
 			SortEntry top = sortArray.getTop();
-			//write to the database
-			while(top != null){
-				ItemDAO.insertItemSimKey(item.getId(), top.getKey(), top.getValue());
+			// write to the database
+			while (top != null) {
+				ItemDAO.insertItemKeySim(item.getId(), top.getKey(),
+						top.getValue());
 				top = top.getNext();
 			}
 		}
@@ -170,13 +203,13 @@ public class ItemTask implements Runnable {
 		double product = 0.0;
 		double length1 = 0.0;
 		double length2 = 0.0;
-		while(iterator.hasNext()){
+		while (iterator.hasNext()) {
 			key = iterator.next();
-			if(map1.containsKey(key))
-				length1 += map1.get(key) *  map1.get(key);
-			if(map2.containsKey(key))
-				length2 += map2.get(key) *  map2.get(key);
-			if(map1.containsKey(key) && map2.containsKey(key))	
+			if (map1.containsKey(key))
+				length1 += map1.get(key) * map1.get(key);
+			if (map2.containsKey(key))
+				length2 += map2.get(key) * map2.get(key);
+			if (map1.containsKey(key) && map2.containsKey(key))
 				product += map1.get(key) * map2.get(key);
 		}
 		return product / (Math.sqrt(length1) * Math.sqrt(length2));
@@ -189,7 +222,7 @@ public class ItemTask implements Runnable {
 	private HashMap<String, Double> tfInDoc(Item item) {
 		String[] wordArray = item.getKeyWords();
 		HashMap<String, Double> map = new HashMap<String, Double>();
-		//term frequency in document
+		// term frequency in document
 		for (int i = 0; i < wordArray.length; i++) {
 			if (map.containsKey(wordArray[i]))
 				map.put(wordArray[i], map.get(wordArray[i]) + 1);
@@ -223,24 +256,24 @@ public class ItemTask implements Runnable {
 				item = iterator.next();
 				keywords = item.getKeyWords();
 				HashSet<String> set = new HashSet<String>();
-				for (int i = 0; i < keywords.length; i++) 
+				for (int i = 0; i < keywords.length; i++)
 					set.add(keywords[i]);
 				Iterator<String> wordIterator = set.iterator();
-				while(wordIterator.hasNext()){
+				while (wordIterator.hasNext()) {
 					key = wordIterator.next();
 					if (tfMap.containsKey(key) == false)
 						tfMap.put(key, 1.0);
 					else
 						tfMap.put(key, tfMap.get(key) + 1);
 				}
-			}//end while
-			//normalize
+			}// end while
+				// normalize
 			Set<String> keySet = tfMap.keySet();
 			Iterator<String> keyIterator = keySet.iterator();
-			while(keyIterator.hasNext()){
+			while (keyIterator.hasNext()) {
 				key = keyIterator.next();
 				value = Math.log(tfMap.get(key) / itemList.size());
-				tfMap.put(key, value); 
+				tfMap.put(key, value);
 			}
 		}
 	}
