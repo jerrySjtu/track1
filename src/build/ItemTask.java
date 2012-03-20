@@ -25,7 +25,7 @@ import data.PostNode;
 import data.SortArray;
 import data.SortEntry;
 
-public class ItemTask implements Runnable {
+public class ItemTask{
 	private String action;
 	private final int BESTNUM = 300;
 	private static HashMap<String, Double> tfMap;
@@ -40,86 +40,12 @@ public class ItemTask implements Runnable {
 	public static void main(String[] args) {
 		ItemTask instance = new ItemTask();
 		String pathName = "/home/sjtu123/data/track1/itemCFIndex.ser";
-		System.out.println("begins----------------");
-		instance.calSimilarityByCF(pathName);
+		System.out.println("begin to build the item-user index----------------");
+		InvertedIndex index = instance.buildCFIndex();
 		System.out.println("finished----------------");
-	}
-
-	@Override
-	public void run() {
-		System.out.println(action + " begins----------------");
-		if (action.equals("simByKeyWord"))
-			calSimlarityByKeyWord();
-		System.out.println(action + " ends----------------");
-	}
-
-	/**
-	 * build the inverted document index with the item id as the term and user
-	 * id as the document
-	 */
-	public InvertedIndex buildCFIndex() {
-		// get all items
-		LinkedList<Item> itemList = ItemDAO.readAllItems();
-		Iterator<Item> itemIterator = itemList.iterator();
-		Item item;
-		LinkedList<Integer> userList;
-		InvertedIndex index = new InvertedIndex();
-		int userID;
-		int i = 1;
-		while (itemIterator.hasNext()) {
-			item = itemIterator.next();
-			userList = ItemDAO.getUserByAcceptedItem(item.getId(), MINTIME,
-					SEPTIME);
-			Iterator<Integer> userIterator = userList.iterator();
-			while (userIterator.hasNext()) {
-				userID = userIterator.next();
-				PostNode postNode = new PostNode(userID, 0);
-				// insert the node
-				index.insertNode(Integer.toString(item.getId()), postNode);
-			}
-			System.out.println("The index of " + i + " item is calculated.");
-			i++;
-		}
-		return index;
-	}
-
-	/**
-	 * @param index
-	 * @param pathName
-	 *            write the index to the file
-	 */
-	public void writeIndex(InvertedIndex index, String pathName) {
-		FileOutputStream fos = null;
-		ObjectOutputStream out = null;
-		try {
-			fos = new FileOutputStream(pathName);
-			out = new ObjectOutputStream(fos);
-			out.writeObject(index);
-			out.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-
-	/**
-	 * @param pathName
-	 * @return load the index from the file
-	 */
-	public InvertedIndex loadIndex(String pathName) {
-		FileInputStream fis = null;
-		ObjectInputStream in = null;
-		InvertedIndex index = null;
-		try {
-			fis = new FileInputStream(pathName);
-			in = new ObjectInputStream(fis);
-			index = (InvertedIndex) in.readObject();
-			in.close();
-		} catch (IOException ex) {
-			ex.printStackTrace();
-		} catch (ClassNotFoundException ex) {
-			ex.printStackTrace();
-		}
-		return index;
+		System.out.println("begin to write the item-user index----------------");
+		instance.writeIndex(index, pathName);
+		System.out.println("finished----------------");
 	}
 
 	// calculate the CF similarity among all items
@@ -276,6 +202,75 @@ public class ItemTask implements Runnable {
 				tfMap.put(key, value);
 			}
 		}
+	}
+	
+	/**
+	 * build the inverted document index with the item id as the term and user
+	 * id as the document
+	 */
+	public InvertedIndex buildCFIndex() {
+		// get all items
+		LinkedList<Item> itemList = ItemDAO.readAllItems();
+		Iterator<Item> itemIterator = itemList.iterator();
+		Item item;
+		LinkedList<Integer> userList;
+		InvertedIndex index = new InvertedIndex();
+		int userID;
+		int i = 1;
+		while (itemIterator.hasNext()) {
+			item = itemIterator.next();
+			userList = ItemDAO.getUserByAcceptedItem(item.getId(), MINTIME,
+					SEPTIME);
+			Iterator<Integer> userIterator = userList.iterator();
+			while (userIterator.hasNext()) {
+				userID = userIterator.next();
+				PostNode postNode = new PostNode(userID, 0);
+				// insert the node
+				index.insertNode(Integer.toString(item.getId()), postNode);
+			}
+			System.out.println("The index of " + i + " item is calculated.");
+			i++;
+		}
+		return index;
+	}
+
+	/**
+	 * @param index
+	 * @param pathName
+	 *            write the index to the file
+	 */
+	public void writeIndex(InvertedIndex index, String pathName) {
+		FileOutputStream fos = null;
+		ObjectOutputStream out = null;
+		try {
+			fos = new FileOutputStream(pathName);
+			out = new ObjectOutputStream(fos);
+			out.writeObject(index);
+			out.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * @param pathName
+	 * @return load the index from the file
+	 */
+	public InvertedIndex loadIndex(String pathName) {
+		FileInputStream fis = null;
+		ObjectInputStream in = null;
+		InvertedIndex index = null;
+		try {
+			fis = new FileInputStream(pathName);
+			in = new ObjectInputStream(fis);
+			index = (InvertedIndex) in.readObject();
+			in.close();
+		} catch (IOException ex) {
+			ex.printStackTrace();
+		} catch (ClassNotFoundException ex) {
+			ex.printStackTrace();
+		}
+		return index;
 	}
 
 	private static void buildItemTable() {

@@ -5,7 +5,6 @@ public class SortArray {
 	private int currentSize;
 	//the elements are arranged from small to big
 	private SortEntry top;
-
 	
 	public SortArray(int maxSize) {
 		this.maxSize = maxSize;
@@ -49,8 +48,10 @@ public class SortArray {
 				}
 				currentSize++;
 				//limit the amount of the list
-				if(currentSize > maxSize)
+				if(currentSize > maxSize){
 					top = top.getNext();
+					currentSize--;
+				}
 			}
 		}
 	}

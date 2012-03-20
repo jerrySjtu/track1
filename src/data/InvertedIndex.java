@@ -87,5 +87,9 @@ public class InvertedIndex implements Serializable {
 			postList.insert(node);
 		}
 	}
+	
+	public void removePostList(String key){
+		index.remove(key);
+	}
 
 }

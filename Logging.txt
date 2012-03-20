@@ -1,0 +1,2 @@
+2012-3-20 22:29:07 log.UseLogger writeLog
+严重: Info Log

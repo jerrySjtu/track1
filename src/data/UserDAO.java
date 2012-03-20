@@ -50,7 +50,7 @@ public class UserDAO {
 		return user;
 	}
 
-	public static LinkedList<User> getAllUserKey() {
+	public static LinkedList<User> getAllUserKeyWord() {
 		LinkedList<User> list = null;
 		try {
 			PreparedStatement preparedStatement = conn

@@ -15,6 +15,8 @@ import java.util.Set;
 import data.InvertedIndex;
 import data.PostList;
 import data.PostNode;
+import data.SortArray;
+import data.SortEntry;
 import data.User;
 import data.UserDAO;
 
@@ -27,19 +29,15 @@ public class UserTask1 {
 	private static LinkedList<User> userList;
 	private static InvertedIndex index;
 	private static HashMap<String, Double> idfMap;
-
-	static {
-		if (userList == null)
-			idfTag();// get the idf and user list
-	}
+	private static final int MAXNEIGHBORNUM = 30;
+	private static final int STOPTAGLIMIT = 2000;
 
 	public static void main(String[] args) {
 		System.out.println("begins--------------");
-		String pathName = "/home/sjtu123/data/track1/userTagIndex.ser";
-		calUserTagSim(pathName);
-//		String pathName = "/home/sjtu123/data/track1/itemCFIndex.ser";
-//		calUserCFSim(pathName);
-		System.out.println("finished--------------");
+//		String pathName = "/home/sjtu123/data/track1/userTagIndex.ser";
+//		calUserTagSim(pathName);
+		 String pathName = "/home/sjtu123/data/track1/itemCFIndex.ser";
+		 calUserCFSim(pathName);
 	}
 
 	/**
@@ -49,20 +47,33 @@ public class UserTask1 {
 	 *            user_sim_cf
 	 */
 	public static void calUserCFSim(String pathName) {
+		// load tag-user index
+		System.out.println("load item-user index --------------");
 		InvertedIndex index = loadIndex(pathName);
-		// get all users
-		LinkedList<User> users = UserDAO.getAllUserProfile();
-		Iterator<User> userIterator = users.iterator();
+		System.out.println("index loaded--------------");
+		// get all users with profile information
+		System.out.println("get all users with profile information--------------");
+		getAllUserProfile();
+		System.out.println("finished--------------");
+		Iterator<User> userIterator = userList.iterator();
 		int i = 1;
 		while (userIterator.hasNext()) {
 			User user = userIterator.next();
-			//get all users who accepted some common items
+			// get all users who accepted some common items
 			Set<Integer> neighborSet = getNeighborByItem(index, user);
 			Iterator<Integer> neighborIerator = neighborSet.iterator();
-			while(neighborIerator.hasNext()){
+			SortArray sortArray = new SortArray(MAXNEIGHBORNUM);
+			while (neighborIerator.hasNext()) {
 				int neighborID = neighborIerator.next();
 				double similarity = cfSimilarity(user.getId(), neighborID);
-				UserDAO.insertSimByCF(user.getId(), neighborID, similarity);
+				// sort the neighbor by similarity and get the MAXNEIGHBORNUM
+				// most similar neighbor
+				sortArray.insert(neighborID, similarity);
+			}
+			SortEntry temp = sortArray.getTop();
+			while (temp != null) {
+				UserDAO.insertSimByCF(user.getId(), temp.getKey(), temp.getValue());
+				temp = temp.getNext();
 			}
 			System.out.println(i + " user's cf sim finished--------------");
 			i++;
@@ -76,31 +87,47 @@ public class UserTask1 {
 	 *            user_sim_tag
 	 */
 	public static void calUserTagSim(String pathName) {
+		// load tag-user index
+		System.out.println("load tag-user index --------------");
 		InvertedIndex index = loadIndex(pathName);
-		// get all users
-		LinkedList<User> users = UserDAO.getAllUserProfile();
-		Iterator<User> userIterator = users.iterator();
+		System.out.println("index loaded--------------");
+		// get all users with profile information
+		System.out.println("get all users with profile information--------------");
+		getAllUserProfile();
+		System.out.println("finished--------------");
+		// get the idf vector after profile information of users is got
+		System.out.println("get the idf vector--------------");
+		idfTag();
+		System.out.println("idf vector got--------------");
+		Iterator<User> userIterator = userList.iterator();
 		int i = 1;
 		while (userIterator.hasNext()) {
 			User user = userIterator.next();
 			Set<Integer> neighborSet = getNeighborSetByTag(index, user);
 			// get all the users who have some common tags
 			Iterator<Integer> neighborIterator = neighborSet.iterator();
-			// calculate the similarity and write to database
+			SortArray sortArray = new SortArray(MAXNEIGHBORNUM);
 			while (neighborIterator.hasNext()) {
-				User neighbor = UserDAO.getUserProfileByID(neighborIterator
-						.next());
+				// calculate the similarity
+				User neighbor = UserDAO.getUserProfileByID(neighborIterator.next());
 				double similarity = profileSimilarity(user, neighbor);
-				UserDAO.insertSimByTag(user.getId(), neighbor.getId(),
-						similarity);
+				// sort the neighbor by similarity and get the MAXNEIGHBORNUM
+				// most similar neighbor
+				sortArray.insert(neighbor.getId(), similarity);
+			}
+			SortEntry temp = sortArray.getTop();
+			while (temp != null) {
+				UserDAO.insertSimByTag(user.getId(), temp.getKey(),
+						temp.getValue());
+				temp = temp.getNext();
 			}
 			System.out.println(i + " user's tag sim finished--------------");
 			i++;
 		}
 	}
-	
+
 	// calculate the similarity of the two users by cf
-	private static double cfSimilarity(int user1, int user2){
+	private static double cfSimilarity(int user1, int user2) {
 		Set<Integer> set1 = UserDAO.getItemAcceptedByID(user1);
 		Set<Integer> set2 = UserDAO.getItemAcceptedByID(user2);
 		Set<Integer> itemSet = new HashSet<Integer>();
@@ -110,13 +137,13 @@ public class UserTask1 {
 		double length1 = 0;
 		double length2 = 0;
 		double product = 0;
-		while(itemIterator.hasNext()){
+		while (itemIterator.hasNext()) {
 			int itemID = itemIterator.next();
-			if(set1.contains(itemID))
+			if (set1.contains(itemID))
 				length1++;
-			if(set2.contains(itemID))
+			if (set2.contains(itemID))
 				length2++;
-			if(set1.contains(itemID) && set2.contains(itemID))
+			if (set1.contains(itemID) && set2.contains(itemID))
 				product++;
 		}
 		return product / (Math.sqrt(length1) * Math.sqrt(length2));
@@ -152,8 +179,7 @@ public class UserTask1 {
 		Set<Integer> neighborSet = new HashSet<Integer>();
 		while (itemIterator.hasNext()) {
 			int itemID = itemIterator.next();
-			PostList postList = index
-					.getPostListByKey(Integer.toString(itemID));
+			PostList postList = index.getPostListByKey(Integer.toString(itemID));
 			PostNode node = postList.getTop();
 			while (node != null) {
 				neighborSet.add(node.getKey());
@@ -164,24 +190,31 @@ public class UserTask1 {
 	}
 
 	// get all the users who have some common tags
-	private static Set<Integer> getNeighborSetByTag(InvertedIndex index, User user) {
+	private static Set<Integer> getNeighborSetByTag(InvertedIndex index,
+			User user) {
 		String[] tags = user.getTags();
 		Set<Integer> neighborSet = new HashSet<Integer>();
 		for (int i = 0; i < tags.length; i++) {
 			PostList postList = index.getPostListByKey(tags[i]);
-			PostNode temp = postList.getTop();
-			while (temp != null) {
-				neighborSet.add(temp.getKey());
-				temp = temp.getNext();
+			if (postList != null && postList.getSize() < STOPTAGLIMIT) {
+				PostNode temp = postList.getTop();
+				while (temp != null) {
+					neighborSet.add(temp.getKey());
+					temp = temp.getNext();
+				}
 			}
 		}
 		return neighborSet;
 	}
 
-	/**
-	 * build the inverted document index
-	 */
-	private static void buildIndex() {
+	// build the inverted document index
+	private static void buildTagIndex() {
+		// get all users with profile infromation
+		getAllUserProfile();
+		// get the idf vector
+		System.out.println("get the idf vector--------------");
+		idfTag();
+		System.out.println("idf vector got--------------");
 		index = new InvertedIndex();
 		Iterator<User> userIterator = userList.iterator();
 		User user;
@@ -207,11 +240,27 @@ public class UserTask1 {
 		}
 	}
 
-	/**
-	 * @param pathName
-	 *            write the index to a file
-	 */
+	public static void buildKeyWordIndex() {
+		index = new InvertedIndex();
+		getAllUserKeyWord();// get all users with key word information
+		Iterator<User> userIterator = userList.iterator();
+		while (userIterator.hasNext()) {
+			User user = userIterator.next();
+		}
+	}
+
+	// write the index to a file
 	private static void writeIndex(String pathName) {
+		// delete the post list whose size is bigger than STOPTAGLIMIT
+		Set<String> keySet = cpySet(index.keySet());
+		Iterator<String> keyIterator = keySet.iterator();
+		while (keyIterator.hasNext()) {
+			String tag = keyIterator.next();
+			PostList postList = index.getPostListByKey(tag);
+			if (postList.getSize() > STOPTAGLIMIT)
+				index.removePostList(tag);
+		}
+		// write the reduced index to a file
 		FileOutputStream fos = null;
 		ObjectOutputStream out = null;
 		try {
@@ -225,6 +274,16 @@ public class UserTask1 {
 			LogManager.writeLogToFile(e.getMessage());
 			e.printStackTrace();
 		}
+	}
+
+	private static Set<String> cpySet(Set<String> set) {
+		Set<String> newSet = new HashSet<String>();
+		Iterator<String> iterator = set.iterator();
+		while (iterator.hasNext()) {
+			String value = iterator.next();
+			newSet.add(iterator.next());
+		}
+		return newSet;
 	}
 
 	public static InvertedIndex loadIndex(String pathName) {
@@ -243,7 +302,7 @@ public class UserTask1 {
 		}
 		return index;
 	}
-	
+
 	private static HashMap<String, Double> tfTag(User user) {
 		String[] tags = user.getTags();
 		HashMap<String, Double> map = new HashMap<String, Double>();
@@ -268,12 +327,20 @@ public class UserTask1 {
 		return map;
 	}
 
-	/**
-	 * calculate the inverse document frequency
-	 */
-	private static HashMap<String, Double> idfTag() {
+	// get all users with the profile information
+	private static void getAllUserProfile() {
 		if (userList == null)
 			userList = UserDAO.getAllUserProfile();
+	}
+
+	// get all users with the key word information
+	private static void getAllUserKeyWord() {
+		if (userList == null)
+			userList = UserDAO.getAllUserKeyWord();
+	}
+
+	// calculate the inverse document frequency
+	private static HashMap<String, Double> idfTag() {
 		if (idfMap == null) {
 			idfMap = new HashMap<String, Double>();
 			Iterator<User> userIterator = userList.iterator();
