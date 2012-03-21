@@ -5,8 +5,10 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.Map;
 
 public class UserDAO {
 
@@ -16,15 +18,19 @@ public class UserDAO {
 		getConnection();
 	}
 
-	public static HashSet<Integer> getItemAcceptedByID(int userID){
+	//get the items which are accepted by the user between minTime and maxTime
+	public static HashSet<Integer> getItemAcceptedByID(int userID, long minTime, long maxTime){
 		HashSet<Integer> set = new HashSet<Integer>();
 		try{
 			PreparedStatement statement = conn.prepareStatement(
-					"select item_id from train_rec_log where user_id=? and result=1");
+					"select item_id, rec_time from rec_log where user_id=? and result=1");
 			statement.setInt(1, userID);
 			ResultSet results = statement.executeQuery();
-			while(results.next())
-				set.add(results.getInt(1));
+			while(results.next()){
+				long timestamp = Long.parseLong(results.getString(2));
+				if(timestamp >= minTime && timestamp <= maxTime)
+					set.add(results.getInt(1));
+			}
 			results.close();
 			statement.close();
 		} catch (SQLException e) {
@@ -50,33 +56,28 @@ public class UserDAO {
 		return user;
 	}
 
-	public static LinkedList<User> getAllUserKeyWord() {
-		LinkedList<User> list = null;
+	public static Map<Integer,String> getAllUserKeyWord() {
+		HashMap<Integer, String> map = new HashMap<Integer, String>();
 		try {
 			PreparedStatement preparedStatement = conn
 					.prepareStatement("select id,key_word from user_key;");
 			ResultSet results = preparedStatement.executeQuery();
-			list = new LinkedList<User>();
-			while (results.next()) {
-				User user = new User(results.getInt(1), 0, null,
-						results.getString(2));
-				list.add(user);
-			}
+			while (results.next()) 
+				map.put(results.getInt(1), results.getString(2));
 			results.close();
 			preparedStatement.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
-		return list;
+		return map;
 	}
 
 	public static LinkedList<User> getAllUserProfile() {
-		LinkedList<User> list = null;
+		LinkedList<User> list = new LinkedList<User>();;
 		try {
 			PreparedStatement preparedStatement = conn
 					.prepareStatement("select id,tweet_num,tag from user_profile;");
 			ResultSet results = preparedStatement.executeQuery();
-			list = new LinkedList<User>();
 			while (results.next()) {
 				User user = new User(results.getInt(1), results.getInt(2),
 						results.getString(3), null);

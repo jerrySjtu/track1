@@ -1,5 +1,7 @@
 package data;
 
+import java.util.LinkedList;
+
 public class User {
 	private int id;
 	private String tags;
@@ -33,6 +35,14 @@ public class User {
 	public String[] getKeyWords() {
 		String delimeter = ";";
 		return keyWords.split(delimeter);
+	}
+	
+	public LinkedList<String> getKeyWordWithoutWeight(){
+		String[] array = keyWords.split(";");
+		LinkedList<String> list = new LinkedList<String>();
+		for(int i = 0; i < array.length; i++)
+			list.add(array[i].split(":")[0]);
+		return list;
 	}
 
 	public void setKeyWords(String keyWords) {

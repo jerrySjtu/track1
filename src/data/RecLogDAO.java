@@ -5,6 +5,8 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.util.Iterator;
 import java.util.LinkedList;
 
 public class RecLogDAO {
@@ -15,14 +17,13 @@ private static Connection conn;
 		getConnection();
 	}
 	
-	public static void main(String[] args){
-		
-	}
-	
-	public static LinkedList<Record> getTrainSet(long minTime, long maxTime){
+
+	public static LinkedList<Record> getTrainSet(long minTime, long maxTime, int startIndex, int endIndex){
 		LinkedList<Record> list = new LinkedList<Record>();
 		try {
-			PreparedStatement statement = conn.prepareStatement("select * from rec_log");
+			PreparedStatement statement = conn.prepareStatement("select * from rec_log limit ?,?");
+			statement.setInt(1, startIndex);
+			statement.setInt(2, endIndex);
 			ResultSet results = statement.executeQuery();
 			while(results.next()){
 				int userID = results.getInt(1);
@@ -35,24 +36,9 @@ private static Connection conn;
 				}
 			}
 		} catch (SQLException e) {
-			// TODO: handle exception
-		}
-	}
-	
-	public static void insertTrainRecLog(int userID,int itemID, int result, String time) {
-		PreparedStatement preparedStatement;
-		try {
-			preparedStatement = conn
-					.prepareStatement("insert into train_rec_log(user_id, item_id, result, rec_time) values(?,?,?,?);");
-			preparedStatement.setInt(1, userID);
-			preparedStatement.setInt(2, itemID);
-			preparedStatement.setInt(3, result);
-			preparedStatement.setString(4, time);
-			preparedStatement.executeUpdate();
-			preparedStatement.close();
-		} catch (SQLException e) {
 			e.printStackTrace();
 		}
+		return list;
 	}
 	
 	public static void insertRecLog(int userID,int itemID, int result, String time) {

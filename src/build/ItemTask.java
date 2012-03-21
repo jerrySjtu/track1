@@ -39,13 +39,22 @@ public class ItemTask{
 
 	public static void main(String[] args) {
 		ItemTask instance = new ItemTask();
-		String pathName = "/home/sjtu123/data/track1/itemCFIndex.ser";
-		System.out.println("begin to build the item-user index----------------");
-		InvertedIndex index = instance.buildCFIndex();
+		String pathName = "/home/sjtu123/data/track1/itemUserIndex.ser";
+		System.out.println("begin to load the item-user index----------------");
+		InvertedIndex index = instance.loadIndex(pathName);
 		System.out.println("finished----------------");
-		System.out.println("begin to write the item-user index----------------");
-		instance.writeIndex(index, pathName);
-		System.out.println("finished----------------");
+		Set<String> keySet = index.keySet();
+		Iterator<String> iterator = keySet.iterator();
+		int i = 0;
+		while(iterator.hasNext()){
+			String key = iterator.next();
+			PostList list = index.getPostListByKey(key);
+			i += list.getSize();
+		}
+		System.out.println(i);
+		//System.out.println("begin to write the item-user index----------------");
+		//instance.writeIndex(index, pathName);
+		//System.out.println("finished----------------");
 	}
 
 	// calculate the CF similarity among all items

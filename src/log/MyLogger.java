@@ -2,33 +2,20 @@ package log;
 
 import java.io.IOException;
 import java.util.logging.FileHandler;
-import java.util.logging.Formatter;
-import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
 
 public class MyLogger {
-	static private FileHandler fileTxt;
-	static private SimpleFormatter formatterTxt;
+	private Logger logger;
 
-	static private FileHandler fileHTML;
-	static private Formatter formatterHTML;
-
-	static public void setup() throws IOException {
-		// Create Logger
-		Logger logger = Logger.getLogger("");
-		logger.setLevel(Level.INFO);
-		fileTxt = new FileHandler("Logging.txt");
-		fileHTML = new FileHandler("Logging.html");
-
-		// Create txt Formatter
-		formatterTxt = new SimpleFormatter();
-		fileTxt.setFormatter(formatterTxt);
-		logger.addHandler(fileTxt);
-
-		// Create HTML Formatter
-		formatterHTML = new HtmlFormater();
-		fileHTML.setFormatter(formatterHTML);
-		logger.addHandler(fileHTML);
+	public MyLogger(String className, String logPath)
+			throws SecurityException, IOException {
+		logger = Logger.getLogger(className);
+		FileHandler fh = new FileHandler(logPath);
+		logger.addHandler(fh);
 	}
+	
+	public void warning(String msg){
+		logger.warning(msg);
+	}
+
 }
