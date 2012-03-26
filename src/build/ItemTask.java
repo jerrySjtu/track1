@@ -17,16 +17,15 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
 
+import data.CategoryKey;
 import data.InvertedIndex;
 import data.Item;
 import data.ItemDAO;
-import data.PostList;
 import data.PostNode;
 import data.SortArray;
 import data.SortEntry;
 
 public class ItemTask{
-	private String action;
 	private final int BESTNUM = 300;
 	private static HashMap<String, Double> tfMap;
 	private static LinkedList<Item> itemList;
@@ -39,40 +38,114 @@ public class ItemTask{
 
 	public static void main(String[] args) {
 		ItemTask instance = new ItemTask();
-		String pathName = "/home/sjtu123/data/track1/itemUserIndex.ser";
-		System.out.println("begin to load the item-user index----------------");
-		InvertedIndex index = instance.loadIndex(pathName);
-		System.out.println("finished----------------");
-		Set<String> keySet = index.keySet();
-		Iterator<String> iterator = keySet.iterator();
-		int i = 0;
-		while(iterator.hasNext()){
-			String key = iterator.next();
-			PostList list = index.getPostListByKey(key);
-			i += list.getSize();
+		instance.calCategorySimilarity();
+	}
+	
+	public void calCategorySimilarity(){
+		//calculate the information content value
+		System.out.println("begin to calcualte information content value...");
+		Map<CategoryKey, Double> infoValueMap = calCategoryProbability();
+		System.out.println("finished...");
+		//get items not in the log 
+		LinkedList<Item> itemNotList = ItemDAO.getItemsNotInLog();
+		LinkedList<Item> itemInList = ItemDAO.getItemsInLog();
+		Iterator<Item> itemNotIterator = itemNotList.iterator();
+		int i = 1;
+		while(itemNotIterator.hasNext()){
+			Item itemNot = itemNotIterator.next();
+			double maxValue = -1;
+			//item 786313 is in the recommendation log
+			Item similarItem = ItemDAO.getItemByID(786313);
+			Iterator<Item> itemInIterator = itemInList.iterator();
+			while(itemInIterator.hasNext()){
+				Item itemIn = itemInIterator.next();
+				double infoValue = calInfoValue(infoValueMap, itemNot, itemIn);
+				if(maxValue < infoValue){
+					maxValue = infoValue;
+					similarItem = itemIn;
+				}
+			}
+			//write to database
+			ItemDAO.insetItemCategorySim(itemNot.getId(), similarItem.getId());
+			System.out.println(i + " item finished..."); 
+			i++;
 		}
-		System.out.println(i);
-		//System.out.println("begin to write the item-user index----------------");
-		//instance.writeIndex(index, pathName);
-		//System.out.println("finished----------------");
+	}
+	
+	public double calInfoValue(Map<CategoryKey, Double> categoryMap, Item item1, Item item2){
+		int[] array1 = item1.getCategory();
+		int[] array2 = item2.getCategory();
+		int i;
+		for(i = 0; i < 4; i++)
+			if(array1[i] != array2[i])
+				break;
+		//different category in the root layer
+		CategoryKey key;
+		if(i == 0)
+			return 0;
+		if(i == 1)
+			key = new CategoryKey(0, 0, array1[i-1]);
+		else
+			key = new CategoryKey(i-1, array1[i-2], array1[i-1]);
+		return categoryMap.get(key);
+	}
+	
+	//calculate the information content value of each category
+	public Map<CategoryKey,Double> calCategoryProbability() {
+		// build the category map
+		Map<CategoryKey, Double> categoryMap = new HashMap<CategoryKey, Double>();
+		LinkedList<Item> itemList = ItemDAO.readAllItems();
+		Iterator<Item> iterator = itemList.iterator();
+		while (iterator.hasNext()) {
+			Item item = iterator.next();
+			int[] cateArray = item.getCategory();
+			for (int i = 0; i < 4; i++) {
+				//0 is the root node
+				CategoryKey key;
+				if(i == 0)
+					key = new CategoryKey(i, 0, cateArray[i]);
+				else
+					key = new CategoryKey(i, cateArray[i-1], cateArray[i]);
+				if (categoryMap.containsKey(key)) {
+					double value = categoryMap.get(key) + 1;
+					categoryMap.put(key, value);
+				}
+				else
+					categoryMap.put(key, 1.0);
+			}
+		}
+		// normalize: calculate the probability for each node
+		Iterator<CategoryKey> keyIterator = categoryMap.keySet().iterator();
+		while(keyIterator.hasNext()){
+			CategoryKey key = keyIterator.next();
+			double value = categoryMap.get(key) / itemList.size();
+			categoryMap.put(key, -Math.log(value));
+		}
+		return categoryMap;
 	}
 
 	// calculate the CF similarity among all items
-	public void calSimilarityByCF(String pathname) {
+	public void calSimilarityByCF() {
+		System.out.println("load item-user index----------------");
+		String pathname = "/home/sjtu123/data/track1/itemUserIndex.ser";
 		InvertedIndex index = loadIndex(pathname);
+		System.out.println("finish loading----------------");
 		ArrayList<String> itemArray = index.keyArray();
+		System.out.println("item size: " + itemArray.size());
 		for (int i = 0; i < itemArray.size(); i++) {
 			String itemID1 = itemArray.get(i);
 			Map<Integer, Double> map1 = index.docMap(itemID1);
 			// calculate the similarity between item i and item j
 			for (int j = i + 1; j < itemArray.size(); j++) {
-				String itemID2 = itemArray.get(i);
+				String itemID2 = itemArray.get(j);
 				Map<Integer, Double> map2 = index.docMap(itemID2);
 				Set<Integer> docUnion = index.docUnion(itemID1, itemID1);
 				double similariy = similarityByCF(docUnion, map1, map2);
 				// write to database
-				ItemDAO.insertItemCFSim(Integer.parseInt(itemID1),
-						Integer.parseInt(itemID2), similariy);
+				if (similariy != 0) {
+					ItemDAO.insertItemCFSim(Integer.parseInt(itemID1),Integer.parseInt(itemID2), similariy);
+					ItemDAO.insertItemCFSim(Integer.parseInt(itemID2),Integer.parseInt(itemID1), similariy);
+				}
 			}
 			System.out.println(i + "th item finsihed calculating CF sim----------------");
 		}
@@ -94,6 +167,9 @@ public class ItemTask{
 			if (map1.containsKey(itemID) && map2.containsKey(itemID))
 				similarity++;
 		}
+		//there are some users who have no record.
+		if(length1 * length2 == 0)
+			return 0;
 		return similarity / (Math.sqrt(length1) * Math.sqrt(length2));
 	}
 
@@ -220,6 +296,7 @@ public class ItemTask{
 	public InvertedIndex buildCFIndex() {
 		// get all items
 		LinkedList<Item> itemList = ItemDAO.readAllItems();
+		System.out.println(itemList.size());
 		Iterator<Item> itemIterator = itemList.iterator();
 		Item item;
 		LinkedList<Integer> userList;
@@ -228,8 +305,7 @@ public class ItemTask{
 		int i = 1;
 		while (itemIterator.hasNext()) {
 			item = itemIterator.next();
-			userList = ItemDAO.getUserByAcceptedItem(item.getId(), MINTIME,
-					SEPTIME);
+			userList = ItemDAO.getUserByAcceptedItem(item.getId(), MINTIME, SEPTIME);
 			Iterator<Integer> userIterator = userList.iterator();
 			while (userIterator.hasNext()) {
 				userID = userIterator.next();

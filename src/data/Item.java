@@ -17,8 +17,12 @@ public class Item {
 	public void setId(int id) {
 		this.id = id;
 	}
-	public String getCategory() {
-		return category;
+	public int[] getCategory() {
+		int[] intArray = new int[4];
+		String[] strArray = category.split("\\.");
+		for(int i = 0; i < strArray.length; i++)
+			intArray[i] = Integer.parseInt(strArray[i]);
+		return intArray;
 	}
 	public void setCategory(String category) {
 		this.category = category;

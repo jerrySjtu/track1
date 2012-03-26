@@ -1,9 +1,16 @@
 package test;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import data.CategoryKey;
 
 public class Test {
 
@@ -11,7 +18,19 @@ public class Test {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		System.out.println(Integer.toString(32453));
+		Set<CategoryKey> set= new HashSet<CategoryKey>();
+		HashMap<CategoryKey, Integer> map = new HashMap<CategoryKey, Integer>();
+		set.add( new CategoryKey(2, 2, 2));
+		map.put( new CategoryKey(2, 2, 2), 1);
+		map.put( new CategoryKey(2, 2, 2), 2);
+		map.put( new CategoryKey(2, 1, 2), 9);
+		set.add( new CategoryKey(2, 4, 2));
+		set.add( new CategoryKey(2, 2, 2));
+		Set<CategoryKey> keySet = map.keySet();
+		Iterator<CategoryKey> iterator = keySet.iterator();
+		while(iterator.hasNext()){
+			System.out.println(iterator.next());
+		}
 	}
 	
 	private static void date(){
@@ -29,6 +48,13 @@ public class Test {
 		Matcher m = pattern.matcher("0988");
 		boolean b = m.matches();	
 		System.out.println(b);
+	}
+	
+	public static int[] testArray(int size){
+		int[] array = new int[size];
+		for(int i = 0; i < size; i++)
+			array[i] = i;
+		return array;
 	}
 
 }
