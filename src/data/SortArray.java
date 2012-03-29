@@ -1,5 +1,8 @@
 package data;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class SortArray {
 	private int maxSize;
 	private int currentSize;
@@ -9,6 +12,20 @@ public class SortArray {
 	public SortArray(int maxSize) {
 		this.maxSize = maxSize;
 		this.currentSize = 0;
+	}
+	
+	public int size(){
+		return currentSize;
+	}
+	
+	public Map<Integer, Double> convertToMap(){
+		Map<Integer, Double> map = new HashMap<Integer, Double>();
+		SortEntry element = top;
+		while(element != null){
+			map.put(element.getKey(), element.getValue());
+			element = element.getNext();
+		}
+		return map;
 	}
 	
 	public SortEntry getTop(){

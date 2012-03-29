@@ -13,7 +13,7 @@ import data.SortArray;
 import data.UserDAO;
 
 public class ItemBasedPredictor {
-	private static final int LISTLIMIT = 30;
+	private static final int LISTLIMIT = 100;
 	// the minimum time
 	private static final long MINTIME = 1318348785;
 	// the time separate the train set and test set
@@ -21,13 +21,13 @@ public class ItemBasedPredictor {
 	// the maximum time
 	private static final long MAXTIME = 1321027199;
 
-	public static void main(String[] args) {
-		int userID = 601635;
-		int itemID = 1774594;
-		SortArray array = recListByCF(userID);
-		System.out.println(array);
-	}
-	
+//	public static void main(String[] args) {
+//		int userID = 601635;
+//		int itemID = 1774594;
+//		SortArray array = recListByCF(userID);
+//		System.out.println(array);
+//	}
+//	
 	public static SortArray recListByKey(int userID){
 		Map<Integer,Double> rateMap = new HashMap<Integer, Double>();
 		Map<Integer, Double> normMap = new HashMap<Integer, Double>();

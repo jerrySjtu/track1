@@ -88,6 +88,8 @@ public class ItemDAO {
 		}
 		return list;
 	}
+	
+	
 
 	public static LinkedList<PostNode> getSimilarItemByKey(int itemID) {
 		LinkedList<PostNode> list = new LinkedList<PostNode>();

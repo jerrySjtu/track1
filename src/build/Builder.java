@@ -5,18 +5,38 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Iterator;
+import java.util.LinkedList;
 
 import data.ItemDAO;
 import data.RecLogDAO;
+import data.Record;
 
 public class Builder {
 	
 	public static void main(String[] args){
-		calItemSimByKeyWord();
+		fillLogBuffer();
 	}
 	
-	private static void calItemSimByKeyWord(){
-
+	private static void fillLogBuffer(){
+		int max = RecLogDAO.getLogSize();
+		int span = 1000000;
+		int downLimit = 1;
+		int upLimit = downLimit + span;
+		while(upLimit <= max){
+			LinkedList<Record> logList = RecLogDAO.getLogWithLimit(downLimit, upLimit);
+			Iterator<Record> logIterator = logList.iterator();
+			while(logIterator.hasNext()){
+				Record record = logIterator.next();
+				RecLogDAO.insertLogBuffer(record);
+			}
+			System.out.println(upLimit + " records are inserted...");
+			downLimit = upLimit + 1;
+			upLimit += span;
+			if(upLimit > max)
+				upLimit = max;
+			logList.clear();
+		}
 	} 
 	
 	private static void buildRecLogTable(){

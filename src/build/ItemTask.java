@@ -38,7 +38,7 @@ public class ItemTask{
 
 	public static void main(String[] args) {
 		ItemTask instance = new ItemTask();
-		instance.calCategorySimilarity();
+		instance.calSimlarityByKeyWord();
 	}
 	
 	public void calCategorySimilarity(){
@@ -178,11 +178,11 @@ public class ItemTask{
 		termFrequency();
 		Item item, dItem;
 		double similariy;
-		for (int i = 0; i < BESTNUM; i++) {
+		for (int i = 0; i < itemList.size(); i++) {
 			item = itemList.get(i);
 			SortArray sortArray = new SortArray(BESTNUM);
 			// calculate the similarity between item i and item j
-			for (int j = i + 1; j < BESTNUM; j++) {
+			for (int j = i + 1; j < itemList.size(); j++) {
 				dItem = itemList.get(j);
 				similariy = simlarityByKeyWord(item, dItem);
 				sortArray.insert(dItem.getId(), similariy);
@@ -190,10 +190,11 @@ public class ItemTask{
 			SortEntry top = sortArray.getTop();
 			// write to the database
 			while (top != null) {
-				ItemDAO.insertItemKeySim(item.getId(), top.getKey(),
-						top.getValue());
+				ItemDAO.insertItemKeySim(item.getId(), top.getKey(), top.getValue());
+				ItemDAO.insertItemKeySim(top.getKey(), item.getId(), top.getValue());
 				top = top.getNext();
 			}
+			System.out.println(i + "th item finsihed calculating key sim----------------");
 		}
 	}
 

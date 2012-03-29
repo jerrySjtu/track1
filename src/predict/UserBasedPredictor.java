@@ -11,7 +11,7 @@ import data.SortArray;
 import data.UserDAO;
 
 public class UserBasedPredictor {
-	public static final int LISTSIZE = 30;
+	public static final int LISTSIZE = 100;
 	// the minimum time
 	private static final long MINTIME = 1318348785;
 	// the time separate the train set and test set
@@ -20,11 +20,11 @@ public class UserBasedPredictor {
 	private static final long MAXTIME = 1321027199;
 	
 	
-	public static void main(String[] args){
-		int userID = 630535;
-		SortArray array = recListByTagSim(userID);
-		System.out.println(array);
-	}
+//	public static void main(String[] args){
+//		int userID = 630535;
+//		SortArray array = recListKeySim(userID);
+//		System.out.println(array);
+//	}
 	
 	/**
 	 * 
@@ -37,14 +37,12 @@ public class UserBasedPredictor {
 		Map<Integer, Double> normMap = new HashMap<Integer, Double>();
 		//get neighbors with tag similarity
 		LinkedList<PostNode> neighborList = UserDAO.getNeighborByTag(userID);
-		System.out.println("neighbor size: " + neighborList.size());
 		Iterator<PostNode> neighborIterator = neighborList.iterator();
 		//calculate prediction
 		while(neighborIterator.hasNext()){
 			PostNode neighborNode = neighborIterator.next();
 			//get the items rated by the neighbor
 			LinkedList<PostNode> itemList = UserDAO.getRatedItemByID(neighborNode.getKey(), MINTIME, SEPTIME);
-			System.out.println("neighbor: " + neighborNode.getKey() + " item size: " + itemList.size());
 			Iterator<PostNode> itemIterator = itemList.iterator();
 			while(itemIterator.hasNext()){
 				PostNode itemNode = itemIterator.next();
@@ -81,14 +79,12 @@ public class UserBasedPredictor {
 		Map<Integer, Double> normMap = new HashMap<Integer, Double>();
 		//get neighbors with tag similarity
 		LinkedList<PostNode> neighborList = UserDAO.getNeighborByKey(userID);
-		System.out.println("neighbor size: " + neighborList.size());
 		Iterator<PostNode> neighborIterator = neighborList.iterator();
 		//calculate prediction
 		while(neighborIterator.hasNext()){
 			PostNode neighborNode = neighborIterator.next();
 			//get the items rated by the neighbor
 			LinkedList<PostNode> itemList = UserDAO.getRatedItemByID(neighborNode.getKey(), MINTIME, SEPTIME);
-			System.out.println("neighbor: " + neighborNode.getKey() + " item size: " + itemList.size());
 			Iterator<PostNode> itemIterator = itemList.iterator();
 			while(itemIterator.hasNext()){
 				PostNode itemNode = itemIterator.next();

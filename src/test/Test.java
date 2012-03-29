@@ -1,7 +1,5 @@
 package test;
 
-import java.io.File;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -10,26 +8,20 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import predict.TrainSetBuildTask;
+
 import data.CategoryKey;
 
 public class Test {
 
 	/**
 	 * @param args
+	 * @throws InterruptedException 
 	 */
-	public static void main(String[] args) {
-		Set<CategoryKey> set= new HashSet<CategoryKey>();
-		HashMap<CategoryKey, Integer> map = new HashMap<CategoryKey, Integer>();
-		set.add( new CategoryKey(2, 2, 2));
-		map.put( new CategoryKey(2, 2, 2), 1);
-		map.put( new CategoryKey(2, 2, 2), 2);
-		map.put( new CategoryKey(2, 1, 2), 9);
-		set.add( new CategoryKey(2, 4, 2));
-		set.add( new CategoryKey(2, 2, 2));
-		Set<CategoryKey> keySet = map.keySet();
-		Iterator<CategoryKey> iterator = keySet.iterator();
-		while(iterator.hasNext()){
-			System.out.println(iterator.next());
+	public static void main(String[] args) throws InterruptedException {
+		while(true){
+			int i = 99 * 99;
+			i = i / 7;
 		}
 	}
 	
@@ -55,6 +47,22 @@ public class Test {
 		for(int i = 0; i < size; i++)
 			array[i] = i;
 		return array;
+	}
+		
+	public static void testHash(){
+		Set<CategoryKey> set= new HashSet<CategoryKey>();
+		HashMap<CategoryKey, Integer> map = new HashMap<CategoryKey, Integer>();
+		set.add( new CategoryKey(2, 2, 2));
+		map.put( new CategoryKey(2, 2, 2), 1);
+		map.put( new CategoryKey(2, 2, 2), 2);
+		map.put( new CategoryKey(2, 1, 2), 9);
+		set.add( new CategoryKey(2, 4, 2));
+		set.add( new CategoryKey(2, 2, 2));
+		Set<CategoryKey> keySet = map.keySet();
+		Iterator<CategoryKey> iterator = keySet.iterator();
+		while(iterator.hasNext()){
+			System.out.println(iterator.next());
+		}
 	}
 
 }
