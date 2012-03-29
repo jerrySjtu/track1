@@ -32,7 +32,7 @@ public class HybridPredictor {
 		buildTrainFile();
 	}
 	
-	//get the train file with the arff extension
+	//build the train file with the arff extension
 	private static void buildTrainFile() throws Exception{
 		//thread pool
 		ExecutorService executor = Executors.newFixedThreadPool(NTHREDS);
