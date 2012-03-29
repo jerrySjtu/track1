@@ -8,11 +8,10 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.LinkedList;
 
-import data.ItemDAO;
 import data.RecLogDAO;
 import data.Record;
 
-public class Builder {
+public class LogBuildTask {
 	
 	public static void main(String[] args){
 		fillLogBuffer();
@@ -64,19 +63,4 @@ public class Builder {
 		System.out.println("ends-----------------------");
 	}
 	
-	private static void buildUserTable(){
-		String pathname = "/home/sjtu123/data/track1/user_action.txt";
-		UserBuildTask actionTask = new UserBuildTask(pathname, "action");
-		Thread actionThread = new Thread(actionTask);
-		pathname = "/home/sjtu123/data/track1/user_sns.txt";
-		UserBuildTask snsTask = new UserBuildTask(pathname, "sns");
-		Thread snsThread = new Thread(snsTask);
-		pathname = "/home/sjtu123/data/track1/user_key_word.txt";
-		UserBuildTask keyWordTask = new UserBuildTask(pathname, "keyword");
-		Thread keyWordThread = new Thread(keyWordTask);
-		actionThread.start();
-		snsThread.start();
-		keyWordThread.start();
-	}
-
 }

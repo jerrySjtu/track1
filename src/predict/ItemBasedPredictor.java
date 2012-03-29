@@ -1,15 +1,21 @@
 package predict;
 
-import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
 
+import build.ItemBuildTask;
+
+import data.InvertedIndex;
+import data.Item;
 import data.ItemDAO;
+import data.PostList;
 import data.PostNode;
 import data.SortArray;
+import data.User;
 import data.UserDAO;
 
 public class ItemBasedPredictor {
@@ -20,6 +26,21 @@ public class ItemBasedPredictor {
 	private static final long SEPTIME = 1320537601;
 	// the maximum time
 	private static final long MAXTIME = 1321027199;
+	private static InvertedIndex itemUserIndex;
+	private static InvertedIndex userItemIndex;
+	private static InvertedIndex keyItemIndex;
+	private static InvertedIndex itemKeyIndex;
+	
+	static{
+		if(itemKeyIndex == null)
+			itemKeyIndex = ItemBuildTask.loadIndex("/home/sjtu123/data/track1/itemKeyIndex.ser");
+		if(keyItemIndex == null)
+			keyItemIndex = ItemBuildTask.loadIndex("/home/sjtu123/data/track1/keyItemIndex.ser");
+		if(userItemIndex == null)
+			userItemIndex = ItemBuildTask.loadIndex("/home/sjtu123/data/track1/userItemIndex.ser");
+		if(itemUserIndex == null)
+			itemUserIndex = ItemBuildTask.loadIndex("/home/sjtu123/data/track1/itemUserIndex.ser");
+	}
 
 //	public static void main(String[] args) {
 //		int userID = 601635;
@@ -28,11 +49,11 @@ public class ItemBasedPredictor {
 //		System.out.println(array);
 //	}
 //	
-	public static SortArray recListByKey(int userID){
+	public static SortArray recListByKey(User user){
 		Map<Integer,Double> rateMap = new HashMap<Integer, Double>();
 		Map<Integer, Double> normMap = new HashMap<Integer, Double>();
 		//get accepted items of the user
-		LinkedList<PostNode> ratedItems = UserDAO.getRatedItemByID(userID, MINTIME, SEPTIME);
+		LinkedList<PostNode> ratedItems = UserDAO.getRatedItemByID(user.getId(), MINTIME, SEPTIME);
 		Iterator<PostNode> itemIterator = ratedItems.iterator();
 		while (itemIterator.hasNext()) {
 			PostNode node = itemIterator.next();
@@ -100,6 +121,66 @@ public class ItemBasedPredictor {
 			sortArray.insert(key, rateMap.get(key) / normMap.get(key));
 		}
 		return sortArray;
+	}
+	
+	private Set<Integer> getSimItemByCF(int itemID) {
+		Set<Integer> itemset = new HashSet<Integer>();
+		String key = String.valueOf(itemID);
+		PostList userList = itemUserIndex.getPostListByKey(key);
+		if(userList != null){
+			PostNode user = userList.getTop();
+			while(user != null){
+				key = String.valueOf(user.getKey());
+				PostList itemList = userItemIndex.getPostListByKey(key);
+				if(itemList != null){
+					PostNode item = itemList.getTop();
+					while(item != null){
+						itemset.add(item.getKey());
+						item = item.getNext();
+					}
+				}
+				user = user.getNext();
+			}
+		}
+		return itemset;
+	}
+
+	private Set<Integer> getSimItemByKey(int itemID) {
+		Set<Integer> itemset = new HashSet<Integer>();
+		String key = String.valueOf(itemID);
+		PostList keyList = itemKeyIndex.getPostListByKey(key);
+		if(keyList != null){
+			PostNode keynode = keyList.getTop();
+			while(keynode != null){
+				key = String.valueOf(keynode.getKey());
+				PostList itemList = keyItemIndex.getPostListByKey(key);
+				if(itemList != null){
+					PostNode item = itemList.getTop();
+					while(item != null){
+						itemset.add(item.getKey());
+						item = item.getNext();
+					}
+				}
+				keynode = keynode.getNext();
+			}
+		}
+		return itemset;
+	}
+
+	private Set<Integer> getSimItemByCategory(Item item) {
+		LinkedList<Item> itemInList = ItemDAO.getItemsInLog();
+		Iterator<Item> itemIterator = itemInList.iterator();
+		double maxinfo = 0;
+		Item neighbor = null;
+		while(itemIterator.hasNext()){
+			Item tempItem = itemIterator.next();
+			double info = ItemSimCalculator.calInfoValue(item, tempItem);
+			if(info > maxinfo){
+				maxinfo = info;
+				neighbor = tempItem;
+			}
+		}
+		return getSimItemByCF(neighbor.getId());
 	}
 
 

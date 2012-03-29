@@ -74,6 +74,11 @@ public class User {
 			PostNode node = iterator.next();
 			keySet.add(node.getKey());
 		}
+		iterator = list2.iterator();
+		while (iterator.hasNext()) {
+			PostNode node = iterator.next();
+			keySet.add(node.getKey());
+		}
 		return keySet;
 	}
 

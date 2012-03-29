@@ -116,6 +116,23 @@ public class UserDAO {
 		}
 		return set;
 	}
+	
+	public static User getUserKeyByID(int userID) {
+		User user = null;
+		try {
+			PreparedStatement preparedStatement = conn
+					.prepareStatement("select key_word from user_key where id=?;");
+			preparedStatement.setInt(1, userID);
+			ResultSet result = preparedStatement.executeQuery();
+			if (result.next())
+				user = new User(userID, 0, null,result.getString(1));
+			result.close();
+			preparedStatement.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return user;
+	}
 
 	public static User getUserProfileByID(int userID) {
 		User user = null;
@@ -135,25 +152,26 @@ public class UserDAO {
 		return user;
 	}
 
-	public static Map<Integer, String> getAllUserKeyWord() {
-		HashMap<Integer, String> map = new HashMap<Integer, String>();
+	public static LinkedList<User> getAllUserKeyWord() {
+		LinkedList<User> list = new LinkedList<User>();
 		try {
 			PreparedStatement preparedStatement = conn
 					.prepareStatement("select id,key_word from user_key;");
 			ResultSet results = preparedStatement.executeQuery();
-			while (results.next())
-				map.put(results.getInt(1), results.getString(2));
+			while (results.next()){
+				User user = new User(results.getInt(1), 0, null, results.getString(2));
+				list.add(user);
+			}
 			results.close();
 			preparedStatement.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
-		return map;
+		return list;
 	}
 
 	public static LinkedList<User> getAllUserProfile() {
 		LinkedList<User> list = new LinkedList<User>();
-		;
 		try {
 			PreparedStatement preparedStatement = conn
 					.prepareStatement("select id,tweet_num,tag from user_profile;");

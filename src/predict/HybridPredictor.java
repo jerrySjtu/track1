@@ -1,14 +1,19 @@
 package predict;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+
 import weka.core.Attribute;
 import weka.core.FastVector;
 import weka.core.Instances;
 import weka.core.converters.ConverterUtils.DataSink;
+import weka.core.converters.ConverterUtils.DataSource;
 
 import data.RecLogDAO;
 
@@ -26,11 +31,19 @@ public class HybridPredictor {
 		buildTrainFile();
 	}
 	
+	private static void loadData() throws Exception{
+		String pathname = "/home/sjtu123/data/track1/train1.arff";
+		DataSource source = new DataSource(pathname);
+		Instances data = source.getDataSet();
+		if (data.classIndex() == -1)
+			data.setClassIndex(data.numAttributes() - 1);
+	}
+	
 	//build the train file with the arff extension
 	private static void buildTrainFile() throws Exception{
 		//thread pool
 		ExecutorService executor = Executors.newFixedThreadPool(NTHREDS);
-		String pathname = "/home/sjtu123/data/track1/train.arff";
+		String pathname = "/home/sjtu123/data/track1/train1.arff";
 		//write head
 		writeHead(pathname);
 		//get all users in train set

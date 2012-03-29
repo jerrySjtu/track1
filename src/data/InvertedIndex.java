@@ -63,11 +63,13 @@ public class InvertedIndex implements Serializable {
 	 */
 	public Map<Integer, Double> docMap(String key) {
 		PostList postList = index.get(key);
-		PostNode temp = postList.getTop();
-		HashMap<Integer, Double> map = new HashMap<Integer, Double>();
-		while(temp != null){
-			map.put(temp.getKey(), temp.getWeight());
-			temp = temp.getNext();
+		Map<Integer, Double> map = new HashMap<Integer, Double>();
+		if (postList != null) {
+			PostNode temp = postList.getTop();
+			while (temp != null) {
+				map.put(temp.getKey(), temp.getWeight());
+				temp = temp.getNext();
+			}
 		}
 		return map;
 	}

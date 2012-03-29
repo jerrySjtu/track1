@@ -69,8 +69,8 @@ public class TrainSetBuildTask implements Runnable {
 		while (logIterator.hasNext()) {
 			Record record = logIterator.next();
 			int itemID = record.getItemID();
-			strBuffer.append("<" + String.valueOf(userID) + ","
-					+ String.valueOf(itemID) + ">");
+			strBuffer.append("'<" + String.valueOf(userID) + ","
+					+ String.valueOf(itemID) + ">'");
 			for (int i = 0; i < 4; i++) {
 				Double rate = mapArray.get(i).get(itemID);
 				if (rate == null)
