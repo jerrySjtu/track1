@@ -1,22 +1,16 @@
 package predict;
 
 import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import weka.core.Attribute;
 import weka.core.FastVector;
-import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.converters.ConverterUtils.DataSink;
 
 import data.RecLogDAO;
-import data.Record;
-import data.SortArray;
-import data.UserDAO;
 
 public class HybridPredictor {
 	//number of threads
