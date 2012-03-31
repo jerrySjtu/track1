@@ -5,10 +5,22 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+import build.UserBuildTask;
+
 import data.InvertedIndex;
 
 public class UserSimCalculator {
 	
+	public static void main(String[] args){
+		int userID1 = 2088948;
+		int userID2 = 1692282;
+		InvertedIndex userKeyIndex = UserBuildTask.loadIndex("/home/sjtu123/data/track/userKeyIndex.ser");
+		InvertedIndex userTagIndex = UserBuildTask.loadIndex("/home/sjtu123/data/track/userTagIndex.ser");
+		double keysim = calKeySim(userID1, userID2, userKeyIndex);
+		double tagsim = calTagSim(userID1, userID2, userTagIndex);
+		System.out.println("key sim: " + keysim);
+		System.out.println("tag sim: " + tagsim);
+	}
 	
 	public static double calKeySim(int userID1, int userID2, InvertedIndex userKeyIndex) {
 		Map<Integer, Double> map1 = userKeyIndex.docMap(String.valueOf(userID1));

@@ -16,25 +16,16 @@ import data.ItemDAO;
 
 public class ItemSimCalculator {
 	private static Map<CategoryKey, Double> categoryMap;
-	private static Map<String, Double> idfMap;
-	private static InvertedIndex itemUserIndex;
 	
 	static{
 		if(categoryMap == null)
 			categoryMap = calCategoryProbability();
-		if(idfMap == null)
-			idfMap = calIdfMap();
-		if(itemUserIndex == null){
-			String pathname = "/home/sjtu123/data/track1/itemUserIndex.ser";
-			itemUserIndex = ItemBuildTask.loadIndex(pathname);
-			System.out.println("index size: " + itemUserIndex.getIndexSize());
-		}
 	}
 	
 	// calculate the CF similarity between two items
-	public static double calCFSim(Item item1, Item item2) {
-		String key1 = String.valueOf(item1.getId());
-		String key2 = String.valueOf(item2.getId());
+	public static double calCFSim(int itemID1, int itemID2, InvertedIndex itemUserIndex) {
+		String key1 = String.valueOf(itemID1);
+		String key2 = String.valueOf(itemID2);
 		Map<Integer, Double> map1 = itemUserIndex.docMap(key1);
 		Map<Integer, Double> map2 = itemUserIndex.docMap(key2);
 		Set<Integer> docUnion = itemUserIndex.docUnion(key1, key2);
@@ -61,19 +52,20 @@ public class ItemSimCalculator {
 	 * @param item2
 	 * @return the similarity calculated by key words of the two items 
 	 */
-	public static double calKeySim(Item item1, Item item2) {
-		Map<String, Double> map1 = tfMap(item1);
-		Map<String, Double> map2 = tfMap(item2);
-		Set<String> keySet = new HashSet<String>();
+	public static double calKeySim(int itemID1, int itemID2, InvertedIndex itemKeyIndex) {
+		String key1 = String.valueOf(itemID1);
+		String key2 = String.valueOf(itemID2);
+		Map<Integer, Double> map1 = itemKeyIndex.docMap(key1);
+		Map<Integer, Double> map2 = itemKeyIndex.docMap(key2);
+		Set<Integer> keySet = new HashSet<Integer>();
 		keySet.addAll(map1.keySet());
 		keySet.addAll(map2.keySet());
-		Iterator<String> iterator = keySet.iterator();
-		String key;
+		Iterator<Integer> iterator = keySet.iterator();
 		double product = 0.0;
 		double length1 = 0.0;
 		double length2 = 0.0;
 		while (iterator.hasNext()) {
-			key = iterator.next();
+			int key = iterator.next();
 			if (map1.containsKey(key))
 				length1 += map1.get(key) * map1.get(key);
 			if (map2.containsKey(key))
@@ -83,62 +75,7 @@ public class ItemSimCalculator {
 		}
 		return product / (Math.sqrt(length1) * Math.sqrt(length2));
 	}
-	
-	/**
-	 * @param item
-	 * @return normalized term frequency of the item
-	 */
-	private static HashMap<String, Double> tfMap(Item item) {
-		String[] wordArray = item.getKeyWords();
-		HashMap<String, Double> map = new HashMap<String, Double>();
-		// term frequency in document
-		for (int i = 0; i < wordArray.length; i++) {
-			if (map.containsKey(wordArray[i]))
-				map.put(wordArray[i], map.get(wordArray[i]) + 1);
-			else
-				map.put(wordArray[i], 1.0);
-		}
-		// normalize the term frequency by idf
-		Set<String> keySet = map.keySet();
-		Iterator<String> iterator = keySet.iterator();
-		while (iterator.hasNext()) {
-			String key = iterator.next();
-			double value = map.get(key);
-			map.put(key, value * idfMap.get(key));
-		}
-		return map;
-	}
-	
-	//return inverted document frequency map
-	private static Map<String, Double> calIdfMap() {
-		LinkedList<Item> itemList = ItemDAO.readAllItems();
-		Map<String, Double> idfMap = new HashMap<String, Double>();
-		Iterator<Item> iterator = itemList.iterator();
-		while (iterator.hasNext()) {
-			Item item = iterator.next();
-			String[] keywords = item.getKeyWords();
-			HashSet<String> set = new HashSet<String>();
-			for (int i = 0; i < keywords.length; i++)
-				set.add(keywords[i]);
-			Iterator<String> wordIterator = set.iterator();
-			while (wordIterator.hasNext()) {
-				String key = wordIterator.next();
-				if (idfMap.containsKey(key) == false)
-					idfMap.put(key, 1.0);
-				else
-					idfMap.put(key, idfMap.get(key) + 1);
-			}
-		}// end while
-		// normalize
-		Set<String> keySet = idfMap.keySet();
-		Iterator<String> keyIterator = keySet.iterator();
-		while (keyIterator.hasNext()) {
-			String key = keyIterator.next();
-			double value = Math.log(idfMap.get(key) / itemList.size());
-			idfMap.put(key, value);
-		}
-		return idfMap;
-	}
+
 	
 	/**
 	 *

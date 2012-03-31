@@ -168,5 +168,13 @@ public class UserBasedPredictor {
 		}
 		return neighborSet;
 	}
+	
+	public static double getTagSim(User user1, User user2){
+		
+		return 0;
+	}
 
+	public static double getKeySim(User user1, User user2){
+		return 0;
+	}
 }
