@@ -16,13 +16,13 @@ public class UserSimCalculator {
 		int userID2 = 1692282;
 		InvertedIndex userKeyIndex = UserBuildTask.loadIndex("/home/sjtu123/data/track/userKeyIndex.ser");
 		InvertedIndex userTagIndex = UserBuildTask.loadIndex("/home/sjtu123/data/track/userTagIndex.ser");
-		double keysim = calKeySim(userID1, userID2, userKeyIndex);
-		double tagsim = calTagSim(userID1, userID2, userTagIndex);
+		double keysim = getKeySim(userID1, userID2, userKeyIndex);
+		double tagsim = getTagSim(userID1, userID2, userTagIndex);
 		System.out.println("key sim: " + keysim);
 		System.out.println("tag sim: " + tagsim);
 	}
 	
-	public static double calKeySim(int userID1, int userID2, InvertedIndex userKeyIndex) {
+	public static double getKeySim(int userID1, int userID2, InvertedIndex userKeyIndex) {
 		Map<Integer, Double> map1 = userKeyIndex.docMap(String.valueOf(userID1));
 		Map<Integer, Double> map2 = userKeyIndex.docMap(String.valueOf(userID2));
 		Set<Integer> union = new HashSet<Integer>();
@@ -48,7 +48,7 @@ public class UserSimCalculator {
 	}
 
 	// calculate the similarity of the two users by profile
-	public static double calTagSim(int userID1, int userID2, InvertedIndex userTagIndex) {
+	public static double getTagSim(int userID1, int userID2, InvertedIndex userTagIndex) {
 		Map<Integer, Double> map1 = userTagIndex.docMap(String.valueOf(userID1));
 		Map<Integer, Double> map2 = userTagIndex.docMap(String.valueOf(userID2));
 		Set<Integer> union = new HashSet<Integer>();

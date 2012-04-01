@@ -1,8 +1,5 @@
 package predict;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -32,7 +29,7 @@ public class HybridPredictor {
 	}
 	
 	private static void loadData() throws Exception{
-		String pathname = "/home/sjtu123/data/track1/train1.arff";
+		String pathname = "/home/sjtu123/data/track1/train.arff";
 		DataSource source = new DataSource(pathname);
 		Instances data = source.getDataSet();
 		if (data.classIndex() == -1)
@@ -43,12 +40,12 @@ public class HybridPredictor {
 	private static void buildTrainFile() throws Exception{
 		//thread pool
 		ExecutorService executor = Executors.newFixedThreadPool(NTHREDS);
-		String pathname = "/home/sjtu123/data/track1/train1.arff";
+		String pathname = "/home/sjtu123/data/track1/train.arff";
 		//write head
 		writeHead(pathname);
 		//get all users in train set
 		System.out.println("begin to get all users in train set!");
-		Set<Integer> userset = RecLogDAO.getTrainUser(SEPTIME, MAXTIME);
+		Set<Integer> userset = RecLogDAO.getTrainUser(SEPTIME+1, MAXTIME);
 		System.out.println( " finished....");
 		Iterator<Integer> userIterator = userset.iterator();
 		int i = 1;

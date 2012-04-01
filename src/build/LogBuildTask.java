@@ -13,30 +13,8 @@ import data.Record;
 
 public class LogBuildTask {
 	
-	public static void main(String[] args){
-		fillLogBuffer();
-	}
+
 	
-	private static void fillLogBuffer(){
-		int max = RecLogDAO.getLogSize();
-		int span = 1000000;
-		int downLimit = 1;
-		int upLimit = downLimit + span;
-		while(upLimit <= max){
-			LinkedList<Record> logList = RecLogDAO.getLogWithLimit(downLimit, upLimit);
-			Iterator<Record> logIterator = logList.iterator();
-			while(logIterator.hasNext()){
-				Record record = logIterator.next();
-				RecLogDAO.insertLogBuffer(record);
-			}
-			System.out.println(upLimit + " records are inserted...");
-			downLimit = upLimit + 1;
-			upLimit += span;
-			if(upLimit > max)
-				upLimit = max;
-			logList.clear();
-		}
-	} 
 	
 	private static void buildRecLogTable(){
 		System.out.println("begins-----------------------");

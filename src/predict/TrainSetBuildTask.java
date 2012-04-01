@@ -9,9 +9,12 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
+import data.Item;
+import data.ItemDAO;
 import data.RecLogDAO;
 import data.Record;
 import data.SortArray;
+import data.User;
 import data.UserDAO;
 
 public class TrainSetBuildTask implements Runnable {
@@ -50,18 +53,9 @@ public class TrainSetBuildTask implements Runnable {
 	}
 
 	public String getDataOfUser() {
-		// get recommendation list by user id
-		ArrayList<Map<Integer, Double>> mapArray = new ArrayList<Map<Integer, Double>>();
-		SortArray recList1 = ItemBasedPredictor.recListByCF(userID);
-		mapArray.add(recList1.convertToMap());
-		SortArray recList2 = ItemBasedPredictor.recListByKey(userID);
-		mapArray.add(recList2.convertToMap());
-		SortArray recList3 = UserBasedPredictor.recListByTagSim(userID);
-		mapArray.add(recList3.convertToMap());
-		SortArray recList4 = UserBasedPredictor.recListKeySim(userID);
-		mapArray.add(recList4.convertToMap());
 		// get mean rate of the user
 		double mean = UserDAO.getRateMean(userID, MINTIME, MAXTIME);
+		User userWithKey = UserDAO.getUserProfileByID(userID);
 		// get log in train set
 		StringBuffer strBuffer = new StringBuffer();
 		LinkedList<Record> logList = RecLogDAO.getTrainSetByUser(userID,SEPTIME, MAXTIME);
@@ -69,14 +63,18 @@ public class TrainSetBuildTask implements Runnable {
 		while (logIterator.hasNext()) {
 			Record record = logIterator.next();
 			int itemID = record.getItemID();
-			strBuffer.append("'<" + String.valueOf(userID) + ","
-					+ String.valueOf(itemID) + ">'");
-			for (int i = 0; i < 4; i++) {
-				Double rate = mapArray.get(i).get(itemID);
-				if (rate == null)
-					strBuffer.append("," + mean);
-				else
-					strBuffer.append("," + rate);
+			Item item = ItemDAO.getItemByID(itemID);
+			strBuffer.append("'<" + String.valueOf(userID) + ","+ String.valueOf(itemID) + ">'");
+			double x[] = new double[5];
+			x[0] = ItemBasedPredictor.predictByCategory(userWithKey, item);
+			x[1] = ItemBasedPredictor.predictByCF(userWithKey, item);
+			x[2] = ItemBasedPredictor.predictByKey(userWithKey, item);
+			x[3] = UserBasedPredictor.predictByKeySim(userID, itemID);
+			x[4] = UserBasedPredictor.predictByTagSim(userID, itemID);
+			for(int i = 0; i < x.length; i++){
+				if(x[i] == 0)
+					x[i] = mean;
+				strBuffer.append("," + x[i]);
 			}
 			strBuffer.append("," + record.getResult() + "\n");
 		}

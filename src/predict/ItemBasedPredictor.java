@@ -1,6 +1,5 @@
 package predict;
 
-import java.io.ObjectInputStream.GetField;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
