@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -13,12 +14,14 @@ import build.UserBuildTask;
 import data.InvertedIndex;
 import data.PostList;
 import data.PostNode;
+import data.SortArray;
+import data.SortEntry;
 import data.User;
 import data.UserDAO;
 
 public class UserBasedPredictor {
-	private static final int STOPKEYLIMIT = 10000;
-	private static final int STOPTAGLIMIT = 10000;
+	private static final int STOPKEYLIMIT = 5000;
+	private static final int STOPTAGLIMIT = 5000;
 	// the minimum time
 	private static final long MINTIME = 1318348785;
 	// the time separate the train set and test set
@@ -26,37 +29,26 @@ public class UserBasedPredictor {
 	// the maximum time
 	private static final long MAXTIME = 1321027199;
 	private static InvertedIndex tagUserIndex;
-	private static InvertedIndex userTagIndex;
 	private static InvertedIndex keyUserIndex;
-	private static InvertedIndex userKeyIndex;
 	
 	static{
-		if(keyUserIndex == null){
-			keyUserIndex = UserBuildTask.loadIndex("/home/sjtu123/data/track1/keyUserIndex.ser");
-			System.out.println("keyUserindex");
-		}
-		if(userKeyIndex == null){
-			userKeyIndex = UserBuildTask.loadIndex("/home/sjtu123/data/track1/userKeyIndex.ser");
-			System.out.println("keyUserindex");
-		}
-		if(tagUserIndex == null)
-			tagUserIndex = UserBuildTask.loadIndex("/home/sjtu123/data/track1/tagUserIndex.ser");
-		if(userTagIndex == null)
-			userTagIndex = UserBuildTask.loadIndex("/home/sjtu123/data/track1/userTagIndex.ser");
+		
+//		if(userKeyIndex == null){
+//			userKeyIndex = UserBuildTask.loadIndex("/home/sjtu123/data/track1/userKeyIndex.ser");
+//			System.out.println("keyUserindex");
+//		}
+		
+//		if(userTagIndex == null)
+//			userTagIndex = UserBuildTask.loadIndex("/home/sjtu123/data/track1/userTagIndex.ser");
 	}
 	
 	public static void main(String[] args){
 		System.out.println("------------");
 		int userID = 1619517;
-		int itemID1 = 1760493;
-		int itemID2 = 2404454;
-		double keyrate1 = predictByKeySim(userID, itemID1);
-		double tagrate1 = predictByTagSim(userID, itemID1);
-		System.out.println(keyrate1 +","+tagrate1);
-		double keyrate2 = predictByKeySim(userID, itemID2);
-		double tagrate2 = predictByTagSim(userID, itemID2);
-		System.out.println(keyrate2 +","+tagrate2);
+		System.out.println(recListByTagSim(userID));
+		System.out.println(recListKeySim(userID));
 	}
+	
 	
 	/**
 	 * 
@@ -64,16 +56,17 @@ public class UserBasedPredictor {
 	 * @param userID
 	 * @return predicted recommendation list based on tag similarity
 	 */
-	public static Map<Integer,Double> recListByTagSim(User user){
+	public static Map<Integer,Double> recListByTagSim(int userID){
 		Map<Integer, Double> recMap = new HashMap<Integer, Double>();
 		Map<Integer, Double> normMap = new HashMap<Integer, Double>();
 		//get neighbors with tag similarity
-		Set<Integer> neighborset = getNeighborsByTag(user);
-		Iterator<Integer> neighborIterator = neighborset.iterator();
+		User user = UserDAO.getUserProfileByID(userID);
+		SortArray neighborArray = getNeighborsByTag(user);
+		SortEntry node = neighborArray.getTop();
 		//calculate prediction 
-		while(neighborIterator.hasNext()){
-			int neighborID = neighborIterator.next();
-			double similarity = UserSimCalculator.getTagSim(user.getId(), neighborID, userTagIndex);
+		while(node != null){
+			int neighborID = node.getKey();
+			double similarity = node.getValue();
 			//get the items rated by the neighbor
 			LinkedList<PostNode> itemList = UserDAO.getRatedItemByID(neighborID, MINTIME, SEPTIME);
 			Iterator<PostNode> itemIterator = itemList.iterator();
@@ -90,6 +83,7 @@ public class UserBasedPredictor {
 					normMap.put(itemNode.getKey(), similarity);
 				}
 			}
+			node = node.getNext();
 		}
 		//normalize and sort the items by prediction
 		Set<Integer> keySet = recMap.keySet();
@@ -106,16 +100,17 @@ public class UserBasedPredictor {
 	 * @param userID
 	 * @return predicted recommendation list based on key similarity
 	 */
-	public static Map<Integer,Double> recListKeySim(User user){
+	public static Map<Integer,Double> recListKeySim(int userID){
 		Map<Integer, Double> recMap = new HashMap<Integer, Double>();
 		Map<Integer, Double> normMap = new HashMap<Integer, Double>();
 		//get neighbors with tag similarity
-		Set<Integer> neighbors = getNeighborsByKeyword(user);
-		Iterator<Integer> neighborIterator = neighbors.iterator();
+		User user = UserDAO.getUserKeyByID(userID);
+		SortArray sortArray = getNeighborsByKeyword(user);
+		SortEntry node = sortArray.getTop();
 		//calculate prediction
-		while(neighborIterator.hasNext()){
-			int neighborID = neighborIterator.next();
-			double similarity = UserSimCalculator.getKeySim(user.getId(), neighborID, userKeyIndex);
+		while(node != null){
+			int neighborID = node.getKey();
+			double similarity = node.getValue();
 			//get the items rated by the neighbor
 			LinkedList<PostNode> itemList = UserDAO.getRatedItemByID(neighborID, MINTIME, SEPTIME);
 			Iterator<PostNode> itemIterator = itemList.iterator();
@@ -132,6 +127,7 @@ public class UserBasedPredictor {
 					normMap.put(itemNode.getKey(), similarity);
 				}
 			}
+			node = node.getNext();
 		}
 		//normalize and sort the items by prediction
 		Set<Integer> keySet = recMap.keySet();
@@ -142,60 +138,12 @@ public class UserBasedPredictor {
 		}
 		return recMap;
 	}
-	
-	
-	public static double predictByKeySim(int userID, int itemID){
-		User user = UserDAO.getUserKeyByID(userID);
-		Set<Integer> neighbors = getNeighborsByKeyword(user);
-		Iterator<Integer> neighborIterator = neighbors.iterator();
-		double rating = 0;
-		double norm = 0;
-		while(neighborIterator.hasNext()){
-			int neighborID = neighborIterator.next();
-			double sim = UserSimCalculator.getKeySim(userID, neighborID, userKeyIndex);
-			LinkedList<PostNode> records = UserDAO.getRatedItemByID(userID, MINTIME, SEPTIME);
-			Iterator<PostNode> recIterator = records.iterator();
-			while(recIterator.hasNext()){
-				PostNode record = recIterator.next();
-				if(record.getKey() == itemID){
-					rating += record.getWeight() * sim;
-					break;
-				}
-				norm += sim;
-			}
-		}
-		if(norm == 0)
-			return 0;
-		return rating / norm;
-	}
 
-	public static double predictByTagSim(int userID, int itemID){
-		User user = UserDAO.getUserProfileByID(userID);
-		Set<Integer> neighbors = getNeighborsByTag(user);
-		Iterator<Integer> neighborIterator = neighbors.iterator();
-		double rating = 0;
-		double norm = 0;
-		while(neighborIterator.hasNext()){
-			int neighborID = neighborIterator.next();
-			double sim = UserSimCalculator.getTagSim(userID, neighborID, userTagIndex);
-			LinkedList<PostNode> records = UserDAO.getRatedItemByID(userID, MINTIME, SEPTIME);
-			Iterator<PostNode> recIterator = records.iterator();
-			while(recIterator.hasNext()){
-				PostNode record = recIterator.next();
-				if(record.getKey() == itemID){
-					rating += record.getWeight() * sim;
-					break;
-				}
-				norm += sim;
-			}
-		}
-		if(norm == 0)
-			return 0;
-		return rating / norm;
-	}
+	
 	
 	// get all the users who have some common item
-	private static Set<Integer> getNeighborsByKeyword(User user) {
+	private static SortArray getNeighborsByKeyword(User user) {
+		InvertedIndex keyUserIndex = getKeyUserIndex();
 		LinkedList<PostNode> keywords = user.getKeyWordList();
 		Iterator<PostNode> keyIterator = keywords.iterator();
 		Set<Integer> neighborSet = new HashSet<Integer>();
@@ -211,11 +159,20 @@ public class UserBasedPredictor {
 				}
 			}
 		}
-		return neighborSet;
+		//sort
+		SortArray sortArray = new SortArray(30);
+		Iterator<Integer> iterator = neighborSet.iterator();
+		while(iterator.hasNext()){
+			int neighborID = iterator.next();
+			double sim = UserSimCalculator.getKeySim(user.getId(), neighborID);
+			sortArray.insert(neighborID, sim);
+		}
+		return sortArray;
 	}
 	
 	// get all the users who have some common tags
-	private static Set<Integer> getNeighborsByTag(User user) {
+	private static SortArray getNeighborsByTag(User user) {
+		InvertedIndex tagUserIndex = getTagUserIndex();
 		String[] tags = user.getTags();
 		Set<Integer> neighborSet = new HashSet<Integer>();
 		for (int i = 0; i < tags.length; i++) {
@@ -228,8 +185,29 @@ public class UserBasedPredictor {
 				}
 			}
 		}
-		return neighborSet;
+		//sort
+		SortArray sortArray = new SortArray(30);
+		Iterator<Integer> iterator = neighborSet.iterator();
+		while (iterator.hasNext()) {
+			int neighborID = iterator.next();
+			double sim = UserSimCalculator.getTagSim(user.getId(), neighborID);
+			sortArray.insert(neighborID, sim);
+		}
+		return sortArray;
 	}
 	
+	private static InvertedIndex getKeyUserIndex(){
+		if(keyUserIndex == null){
+			keyUserIndex = UserBuildTask.loadIndex("/home/sjtu123/data/track1/keyUserIndex.ser");
+			System.out.println("keyUserindex");
+		}
+		return keyUserIndex;
+	}
+	
+	private static InvertedIndex getTagUserIndex(){
+		if(tagUserIndex == null)
+			tagUserIndex = UserBuildTask.loadIndex("/home/sjtu123/data/track1/tagUserIndex.ser");
+		return tagUserIndex;
+	}
 
 }

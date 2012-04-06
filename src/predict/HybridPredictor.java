@@ -41,20 +41,23 @@ public class HybridPredictor {
 		//thread pool
 		ExecutorService executor = Executors.newFixedThreadPool(NTHREDS);
 		String pathname = "/home/sjtu123/data/track1/train.arff";
+		TrainSetBuildTask.setPathName(pathname);
 		//write head
 		writeHead(pathname);
 		//get all users in train set
 		System.out.println("begin to get all users in train set!");
 		Set<Integer> userset = RecLogDAO.getTrainUser(SEPTIME+1, MAXTIME);
 		System.out.println( " finished....");
+		//initiation should be noticed under multiple threads
+		System.out.println("initiate.....");
+		ItemBasedPredictor.init();
+		ItemSimCalculator.init();
+		System.out.println("finished....");
 		Iterator<Integer> userIterator = userset.iterator();
-		int i = 1;
 		while(userIterator.hasNext()){
 			int userID = userIterator.next();
-			Thread t = new Thread(new TrainSetBuildTask(userID, pathname));
+			Thread t = new Thread(new TrainSetBuildTask(userID));
 			executor.execute(t);
-			System.out.println(i + " th user calculated!!!");
-			i++;
 		}//end while
 		executor.shutdown();
 		// Wait until all threads are finish
@@ -67,15 +70,18 @@ public class HybridPredictor {
 		Attribute key = new Attribute("key", (FastVector) null);
 		Attribute itemCFRate = new Attribute("itemCFRate");
 		Attribute itemKeyRate = new Attribute("itemKeyRate");
-		Attribute userKeyRate = new Attribute("userKeyRate");
-		Attribute userTagRate = new Attribute("userTagRate");
-		Attribute result = new Attribute("result");
+//		Attribute userKeyRate = new Attribute("userKeyRate");
+//		Attribute userTagRate = new Attribute("userTagRate");
+		FastVector labels = new FastVector();
+		labels.addElement("1");
+		labels.addElement("-1");
+		Attribute result = new Attribute("result", labels);
 		FastVector atts = new FastVector();
 		atts.addElement(key);
 		atts.addElement(itemCFRate);
 		atts.addElement(itemKeyRate);
-		atts.addElement(userKeyRate);
-		atts.addElement(userTagRate);
+//		atts.addElement(userKeyRate);
+//		atts.addElement(userTagRate);
 		atts.addElement(result);
 		Instances dataset = new Instances("recommendation", atts, 14130272);
 		DataSink.write(pathname, dataset);

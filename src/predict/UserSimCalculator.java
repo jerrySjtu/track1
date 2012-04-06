@@ -2,44 +2,46 @@ package predict;
 
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
 
 import build.UserBuildTask;
 
 import data.InvertedIndex;
+import data.PostNode;
+import data.User;
+import data.UserDAO;
 
 public class UserSimCalculator {
 	
 	public static void main(String[] args){
-		int userID1 = 2088948;
-		int userID2 = 1692282;
-		InvertedIndex userKeyIndex = UserBuildTask.loadIndex("/home/sjtu123/data/track/userKeyIndex.ser");
-		InvertedIndex userTagIndex = UserBuildTask.loadIndex("/home/sjtu123/data/track/userTagIndex.ser");
-		double keysim = getKeySim(userID1, userID2, userKeyIndex);
-		double tagsim = getTagSim(userID1, userID2, userTagIndex);
-		System.out.println("key sim: " + keysim);
-		System.out.println("tag sim: " + tagsim);
+		int userID1 = 105093;
+		int userID2 = 983457;
+		System.out.println(getKeySim(userID1, userID2));
+		System.out.println(getTagSim(userID1, userID2));
 	}
 	
-	public static double getKeySim(int userID1, int userID2, InvertedIndex userKeyIndex) {
-		Map<Integer, Double> map1 = userKeyIndex.docMap(String.valueOf(userID1));
-		Map<Integer, Double> map2 = userKeyIndex.docMap(String.valueOf(userID2));
-		Set<Integer> union = new HashSet<Integer>();
-		union.addAll(map1.keySet());
-		union.addAll(map2.keySet());
+	public static double getKeySim(int userID1, int userID2) {
+		User user1 = UserDAO.getUserKeyByID(userID1);
+		User user2 = UserDAO.getUserKeyByID(userID2);
+		LinkedList<PostNode> list1 = user1.getKeyWordList();
+		LinkedList<PostNode> list2 = user2.getKeyWordList();
+		Set<Integer> union = User.keyUnion(list1, list2);
 		Iterator<Integer> iterator = union.iterator();
 		double length1 = 0;
 		double length2 = 0;
 		double product = 0;
 		while (iterator.hasNext()) {
 			int tag = iterator.next();
-			if (map1.containsKey(tag))
-				length1 += map1.get(tag) * map1.get(tag);
-			if (map2.containsKey(tag))
-				length2 += map2.get(tag) * map2.get(tag);
-			if (map1.containsKey(tag) && map2.containsKey(tag))
-				product += map1.get(tag) * map2.get(tag);
+			PostNode node1 = User.getKeyWeight(tag, list1);
+			PostNode node2 = User.getKeyWeight(tag, list2);
+			if (node1 != null)
+				length1 += node1.getWeight() * node1.getWeight();
+			if (node2  != null)
+				length2 += node2.getWeight() * node2.getWeight();
+			if (node1 != null && node2 != null)
+				product += node1.getWeight() * node2.getWeight();
 		}
 		//some users have no tag
 		if(length1 * length2 == 0)
@@ -48,24 +50,26 @@ public class UserSimCalculator {
 	}
 
 	// calculate the similarity of the two users by profile
-	public static double getTagSim(int userID1, int userID2, InvertedIndex userTagIndex) {
-		Map<Integer, Double> map1 = userTagIndex.docMap(String.valueOf(userID1));
-		Map<Integer, Double> map2 = userTagIndex.docMap(String.valueOf(userID2));
+	public static double getTagSim(int userID1, int userID2) {
+		User user1 = UserDAO.getUserProfileByID(userID1);
+		User user2 = UserDAO.getUserProfileByID(userID2);
+		Set<Integer> tagset1 = user1.getTagset();
+		Set<Integer> tagset2 = user2.getTagset();
 		Set<Integer> union = new HashSet<Integer>();
-		union.addAll(map1.keySet());
-		union.addAll(map2.keySet());
+		union.addAll(tagset1);
+		union.addAll(tagset2);
 		Iterator<Integer> iterator = union.iterator();
 		double length1 = 0;
 		double length2 = 0;
 		double product = 0;
 		while (iterator.hasNext()) {
 			int tag = iterator.next();
-			if (map1.containsKey(tag))
-				length1 += map1.get(tag) * map1.get(tag);
-			if (map2.containsKey(tag))
-				length2 += map2.get(tag) * map2.get(tag);
-			if (map1.containsKey(tag) && map2.containsKey(tag))
-				product += map1.get(tag) * map2.get(tag);
+			if (tagset1.contains(tag))
+				length1++;
+			if (tagset2.contains(tag))
+				length2++;
+			if (tagset1.contains(tag) && tagset2.contains(tag))
+				product++;
 		}
 		//some users have no tag
 		if(length1 * length2 == 0)

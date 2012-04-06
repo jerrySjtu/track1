@@ -5,7 +5,9 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.Set;
 
 public class ItemDAO {
 	private static Connection conn;
@@ -32,22 +34,20 @@ public class ItemDAO {
 		return list;
 	}
 	
-	public static LinkedList<Item> getItemsNotInLog(){
-		LinkedList<Item> list = new LinkedList<Item>();
+	public static Set<Integer> getItemsetNotInLog(){
+		Set<Integer> set = new HashSet<Integer>();
 		try {
 			PreparedStatement statement = conn.prepareStatement("select id " +
 					"from item where id not in (select distinct item_id from rec_log)");
 			ResultSet resultSet = statement.executeQuery();
-			while(resultSet.next()){
-				Item item = getItemByID(resultSet.getInt(1));
-				list.add(item);
-			}
+			while(resultSet.next())
+				set.add(resultSet.getInt(1));
 			resultSet.close();
 			statement.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
-		return list;
+		return set;
 	}
 	
 	/**

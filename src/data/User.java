@@ -31,6 +31,14 @@ public class User {
 		String regex = ";";
 		return tags.split(regex);
 	}
+	
+	public Set<Integer> getTagset() {
+		Set<Integer> tagset = new HashSet<Integer>(30);
+		String[] array = tags.split(";");
+		for(int i = 0; i < array.length; i++)
+			tagset.add(Integer.parseInt(array[i]));
+		return tagset;
+	}
 
 	public void setTags(String tags) {
 		this.tags = tags;

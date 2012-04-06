@@ -43,16 +43,20 @@ public class InvertedIndex implements Serializable {
 	public Set<Integer> docUnion(String key1, String key2) {
 		Set<Integer> docUnion = new HashSet<Integer>();
 		PostList postlist = index.get(key1);
-		PostNode temp = postlist.getTop();
-		while (temp != null) {
-			docUnion.add(temp.getKey());
-			temp = temp.getNext();
+		if (postlist != null) {
+			PostNode temp = postlist.getTop();
+			while (temp != null) {
+				docUnion.add(temp.getKey());
+				temp = temp.getNext();
+			}
 		}
 		postlist = index.get(key2);
-		temp = postlist.getTop();
-		while (temp != null) {
-			docUnion.add(temp.getKey());
-			temp = temp.getNext();
+		if (postlist != null) {
+			PostNode temp = postlist.getTop();
+			while (temp != null) {
+				docUnion.add(temp.getKey());
+				temp = temp.getNext();
+			}
 		}
 		return docUnion;
 	}

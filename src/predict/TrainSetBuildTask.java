@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -26,12 +27,12 @@ public class TrainSetBuildTask implements Runnable {
 	private static final long MAXTIME = 1321027199;
 	// lock for the file
 	private static ReentrantLock lock = new ReentrantLock();
+	private static String pathname;
+	private static int num = 1;
 	private int userID;
-	private String pathname;
 
-	public TrainSetBuildTask(int userID, String pathname) {
+	public TrainSetBuildTask(int userID) {
 		this.userID = userID;
-		this.pathname = pathname;
 	}
 
 	@Override
@@ -45,6 +46,8 @@ public class TrainSetBuildTask implements Runnable {
 			FileWriter fw = new FileWriter(new File(pathname), true);
 			fw.write(content);
 			fw.close();
+			System.out.println(num + " th user is calculated...");
+			num++;
 			// unlock
 			lock.unlock();
 		} catch (IOException e) {
@@ -55,30 +58,30 @@ public class TrainSetBuildTask implements Runnable {
 	public String getDataOfUser() {
 		// get mean rate of the user
 		double mean = UserDAO.getRateMean(userID, MINTIME, MAXTIME);
-		User userWithKey = UserDAO.getUserProfileByID(userID);
 		// get log in train set
 		StringBuffer strBuffer = new StringBuffer();
-		LinkedList<Record> logList = RecLogDAO.getTrainSetByUser(userID,SEPTIME, MAXTIME);
+		LinkedList<Record> logList = RecLogDAO.getTrainSetByUser(userID,SEPTIME+1, MAXTIME);
 		Iterator<Record> logIterator = logList.iterator();
 		while (logIterator.hasNext()) {
 			Record record = logIterator.next();
 			int itemID = record.getItemID();
 			Item item = ItemDAO.getItemByID(itemID);
 			strBuffer.append("'<" + String.valueOf(userID) + ","+ String.valueOf(itemID) + ">'");
-			double x[] = new double[5];
-			x[0] = ItemBasedPredictor.predictByCategory(userWithKey, item);
-			x[1] = ItemBasedPredictor.predictByCF(userWithKey, item);
-			x[2] = ItemBasedPredictor.predictByKey(userWithKey, item);
-			x[3] = UserBasedPredictor.predictByKeySim(userID, itemID);
-			x[4] = UserBasedPredictor.predictByTagSim(userID, itemID);
+			double x[] = new double[2];
+			x[0] = ItemBasedPredictor.recByCF(userID, item);
+			x[1] = ItemBasedPredictor.recByKey(itemID, item);
 			for(int i = 0; i < x.length; i++){
 				if(x[i] == 0)
 					x[i] = mean;
 				strBuffer.append("," + x[i]);
 			}
-			strBuffer.append("," + record.getResult() + "\n");
+			strBuffer.append(",'" + record.getResult() + "'\n");
 		}
 		return strBuffer.toString();
+	}
+	
+	public static void setPathName(String path){
+		pathname = path;
 	}
 
 }
